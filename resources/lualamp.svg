@@ -1,0 +1,87 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <defs>
+    <!-- Background Gradient -->
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#141f38" />
+      <stop offset="100%" stop-color="#080d1c" />
+    </linearGradient>
+
+    <!-- Warm Glow Radial Gradient -->
+    <radialGradient id="lampGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#ffe066" stop-opacity="0.8" />
+      <stop offset="35%" stop-color="#ffaa00" stop-opacity="0.35" />
+      <stop offset="70%" stop-color="#ff7700" stop-opacity="0.1" />
+      <stop offset="100%" stop-color="#ff5500" stop-opacity="0" />
+    </radialGradient>
+
+    <!-- Glass Interior Gradient -->
+    <linearGradient id="glassGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#fff8e7" stop-opacity="0.25" />
+      <stop offset="100%" stop-color="#334d80" stop-opacity="0.1" />
+    </linearGradient>
+
+    <!-- Brass Socket Gradient -->
+    <linearGradient id="brassGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#b3945c" />
+      <stop offset="50%" stop-color="#ebd194" />
+      <stop offset="100%" stop-color="#806638" />
+    </linearGradient>
+
+    <!-- Drop Shadow Filter -->
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="130%">
+      <feDropShadow dx="0" dy="24" stdDeviation="28" flood-color="#000" flood-opacity="0.5" />
+    </filter>
+  </defs>
+
+  <!-- Squircle Base -->
+  <rect x="100" y="100" width="824" height="824" rx="185" fill="url(#bgGrad)" filter="url(#shadow)" />
+
+  <!-- Orbital Rings -->
+  <g stroke="#335999" stroke-opacity="0.25" stroke-width="2" fill="none">
+    <circle cx="512" cy="494" r="160" />
+    <circle cx="512" cy="494" r="260" />
+    <circle cx="512" cy="494" r="360" />
+  </g>
+
+  <!-- Lua Moon Accent -->
+  <circle cx="710" cy="294" r="34" fill="#000080" fill-opacity="0.4" />
+  <circle cx="706" cy="290" r="28" fill="#f5c233" fill-opacity="0.9" />
+
+  <!-- Volumetric Lamp Glow -->
+  <circle cx="512" cy="474" r="260" fill="url(#lampGlow)" />
+
+  <!-- Glass Bulb Dome -->
+  <path d="M 440,634 C 440,584 352,534 352,459 A 160,160 0 1,1 672,459 C 672,534 584,584 584,634 Z"
+        fill="url(#glassGrad)" stroke="#ffeab0" stroke-width="5" />
+
+  <!-- Support Wires -->
+  <path d="M 480,624 L 472,504 M 544,624 L 552,504" stroke="#b3a68c" stroke-width="4" stroke-linecap="round" />
+
+  <!-- Glowing Incandescent Filament ("L" loop) -->
+  <!-- Outer Bloom -->
+  <path d="M 472,504 C 460,474 450,454 450,434 C 450,399 480,379 512,379 C 544,379 574,399 574,434 C 574,454 564,474 552,504"
+        fill="none" stroke="#ffaa11" stroke-width="22" stroke-linecap="round" stroke-opacity="0.4" />
+  <!-- Mid Bloom -->
+  <path d="M 472,504 C 460,474 450,454 450,434 C 450,399 480,379 512,379 C 544,379 574,399 574,434 C 574,454 564,474 552,504"
+        fill="none" stroke="#ffd433" stroke-width="12" stroke-linecap="round" stroke-opacity="0.8" />
+  <!-- Hot Core Wire -->
+  <path d="M 472,504 C 460,474 450,454 450,434 C 450,399 480,379 512,379 C 544,379 574,399 574,434 C 574,454 564,474 552,504"
+        fill="none" stroke="#ffffff" stroke-width="5" stroke-linecap="round" />
+
+  <!-- Glass Specular Highlight Arc -->
+  <path d="M 376,430 A 144,144 0 0,1 450,335" fill="none" stroke="#ffffff" stroke-width="8" stroke-linecap="round" stroke-opacity="0.45" />
+
+  <!-- Metallic Socket Base Threads -->
+  <rect x="444" y="634" width="136" height="20" rx="8" fill="url(#brassGrad)" />
+  <rect x="446" y="658" width="132" height="20" rx="8" fill="url(#brassGrad)" />
+  <rect x="448" y="682" width="128" height="20" rx="8" fill="url(#brassGrad)" />
+  <rect x="450" y="706" width="124" height="20" rx="8" fill="url(#brassGrad)" />
+
+  <!-- Base Insulator & Contact -->
+  <ellipse cx="512" cy="736" rx="34" ry="9" fill="#26262e" />
+  <ellipse cx="512" cy="744" rx="18" ry="7" fill="#a6a6b3" />
+
+  <!-- Bottom Title Label -->
+  <text x="512" y="840" font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif"
+        font-weight="900" font-size="44" letter-spacing="6" fill="#f5d966" text-anchor="middle">LUA LAMP</text>
+</svg>

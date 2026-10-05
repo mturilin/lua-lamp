@@ -1,0 +1,14 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Build artifacts
+dist/
+build/
+build-runtime/
+*.AppImage
+
+# User logs & caches
+*.log
+.cache/

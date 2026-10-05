@@ -1,0 +1,71 @@
+#!/usr/bin/env bash
+# Lua Lamp Application Launcher & CLI Wrapper
+set -e
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+# Locate suitable Lua/SDL2 runtime binary
+LUALAMP_BIN=""
+if [ -x "$SCRIPT_DIR/dist/Lua Lamp.app/Contents/MacOS/lualamp" ]; then
+  LUALAMP_BIN="$SCRIPT_DIR/dist/Lua Lamp.app/Contents/MacOS/lualamp"
+elif [ -x "/Applications/Lua Lamp.app/Contents/MacOS/lualamp" ]; then
+  LUALAMP_BIN="/Applications/Lua Lamp.app/Contents/MacOS/lualamp"
+elif [ -x "/Applications/Lite XL.app/Contents/MacOS/lite-xl" ]; then
+  LUALAMP_BIN="/Applications/Lite XL.app/Contents/MacOS/lite-xl"
+elif [ -x "/Applications/Pinglet.app/Contents/MacOS/pinglet" ]; then
+  LUALAMP_BIN="/Applications/Pinglet.app/Contents/MacOS/pinglet"
+elif command -v lualamp >/dev/null 2>&1; then
+  LUALAMP_BIN="$(command -v lualamp)"
+elif command -v lite-xl >/dev/null 2>&1; then
+  LUALAMP_BIN="$(command -v lite-xl)"
+elif [ -x "$HOME/.local/bin/lualamp" ]; then
+  LUALAMP_BIN="$HOME/.local/bin/lualamp"
+elif [ -x "$HOME/.local/bin/lite-xl" ]; then
+  LUALAMP_BIN="$HOME/.local/bin/lite-xl"
+fi
+
+if [ -z "$LUALAMP_BIN" ] || [ ! -x "$LUALAMP_BIN" ]; then
+  echo "Error: Lua Lamp runtime binary not found." >&2
+  echo "Please run './scripts/bundle_macos_app.sh' on macOS or './scripts/bundle_linux.sh' on Linux." >&2
+  exit 1
+fi
+
+export LUALAMP_USERDIR="$SCRIPT_DIR"
+export LITE_USERDIR="$SCRIPT_DIR"
+
+show_help() {
+  cat << EOF
+💡 Lua Lamp — Lua & SDL2 Desktop Application Starter Template
+
+Usage:
+  lualamp                Launch Lua Lamp application
+  lualamp --test         Run automated headless verification test suite
+  lualamp --help         Show this help message
+  lualamp --version      Show version information
+
+Keyboard Controls:
+  <Space>               Toggle central lamp glow & beam animation
+  <T>                   Toggle between Dark and Light color themes
+  <Click>               Spawn radiant ripple on canvas
+  <F11>                 Toggle Fullscreen mode
+  <Q> / <Esc>           Quit application
+EOF
+}
+
+case "$1" in
+  --help|-h)
+    show_help
+    exit 0
+    ;;
+  --version|-v)
+    echo "Lua Lamp v1.0.0 (Lua 5.4 / SDL2 platform)"
+    exit 0
+    ;;
+  --test)
+    export LUALAMP_TEST_SCRIPT="$SCRIPT_DIR/tests/test_lualamp.lua"
+    exec "$LUALAMP_BIN"
+    ;;
+  *)
+    exec "$LUALAMP_BIN" "$@"
+    ;;
+esac

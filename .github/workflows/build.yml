@@ -1,0 +1,100 @@
+name: Build & Package Lua Lamp
+
+on:
+  push:
+    branches: [ main ]
+    tags: [ 'v*' ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  # --------------------------------------------------------------------------
+  # 1. macOS Build & Verification Job
+  # --------------------------------------------------------------------------
+  build-macos:
+    name: Build macOS Standalone App
+    runs-on: macos-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install SDL2 via Homebrew
+        run: brew install sdl2 freetype pcre2
+
+      - name: Generate Icon Assets
+        run: swift scripts/generate_icon.swift
+
+      - name: Bundle macOS Application
+        run: ./scripts/bundle_macos_app.sh
+
+      - name: Run Automated Test Suite
+        run: ./bin/lualamp --test
+
+      - name: Create macOS Release Archive
+        run: |
+          cd dist
+          zip -r "Lua-Lamp-macOS.zip" "Lua Lamp.app"
+
+      - name: Upload macOS Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Lua-Lamp-macOS
+          path: dist/Lua-Lamp-macOS.zip
+
+  # --------------------------------------------------------------------------
+  # 2. Linux Build & Verification Job
+  # --------------------------------------------------------------------------
+  build-linux:
+    name: Build Linux Portable Package & AppImage
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Build Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential \
+            gcc \
+            git \
+            meson \
+            ninja-build \
+            libsdl2-dev \
+            libfreetype6-dev \
+            libpcre2-dev \
+            xvfb
+
+      - name: Compile Native Runtime Binary
+        run: ./scripts/build_runtime_linux.sh
+
+      - name: Run Headless Verification with Xvfb
+        run: |
+          xvfb-run -a ./dist/lualamp-linux-x86_64/lualamp --test
+
+      - name: Upload Linux Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Lua-Lamp-linux-x86_64
+          path: dist/lualamp-linux-x86_64.tar.gz
+
+  # --------------------------------------------------------------------------
+  # 3. Publish GitHub Release (on tag)
+  # --------------------------------------------------------------------------
+  release:
+    name: Publish GitHub Release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [build-macos, build-linux]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+
+      - name: Publish Release Assets
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            Lua-Lamp-macOS/Lua-Lamp-macOS.zip
+            Lua-Lamp-linux-x86_64/lualamp-linux-x86_64.tar.gz
