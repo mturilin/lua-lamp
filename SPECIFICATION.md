@@ -50,6 +50,13 @@ It provides a "blank canvas" starting point featuring a centered "Hello, World!"
 - Every distribution must pass the automated headless test suite (`bin/lualamp --test` or `tests/test_lualamp.lua`) with zero assertion failures.
 - Headless execution tests engine boot, font loading, theme toggling, canvas animation state, vector drawing, and event dispatching.
 
+### Invariant 7: Optical Baseline & UI Alignment Invariant
+- Text, labels, and badges must never be vertically aligned by naive line-height division alone (`math.floor((h - font:get_height()) / 2)`), which produces an optical upward drift of 1–2px due to Latin font descender reservations.
+- All centered UI labels, numerals, and badges must apply optical baseline compensation (`math.floor(1.2 * SCALE)`).
+- Icons and labels must be measured independently with decoupled optical vertical centers.
+- Interactive controls must use borderless translucent fills (resting/hover/active) rather than high-contrast 1px wireframe outlines.
+- All rounded vector curves must compute fractional area coverage for anti-aliasing. See [`AGENTS.md`](file:///Users/mturilin/Dev/lua-lamp/AGENTS.md) for full protocol.
+
 ---
 
 ## 3. Architecture & Directory Blueprint
@@ -62,11 +69,10 @@ lua-lamp/
 │   └── lualamp                 # Development & CLI launcher script
 ├── dist/                       # Output build artifacts (.app, .tar.gz, .AppImage)
 ├── fonts/                      # Bundled TrueType typography
-│   ├── PublicSans-Bold.ttf
-│   ├── PublicSans-Medium.ttf
-│   ├── PublicSans-Regular.ttf
-│   ├── SourceSans3-Regular.ttf
-│   └── fontawesome.ttf
+│   ├── PublicSans-*.ttf        # UI body typography
+│   ├── SourceSans3-*.ttf       # Monospace typography
+│   ├── tabler-icons.ttf        # Tabler Icons (outline)
+│   └── tabler-icons-filled.ttf # Tabler Icons (filled)
 ├── resources/                  # Application branding and vector assets
 │   ├── icon.png                # Master 1024x1024 Retina icon
 │   ├── lualamp.svg             # Scalable vector icon
@@ -79,6 +85,7 @@ lua-lamp/
 │   └── generate_icon.swift     # Procedural macOS .icns and PNG generator
 ├── src/                        # Modular application code
 │   ├── canvas.lua              # Central "Hello World" canvas component
+│   ├── icons.lua               # Tabler icon codepoints registry
 │   ├── style.lua               # Theme management (dark/light) & font loader
 │   └── ui.lua                  # Reusable drawing primitives & UI components
 ├── tests/
@@ -87,6 +94,7 @@ lua-lamp/
 ├── LICENSE                     # MIT Open Source License
 ├── README.md                   # User documentation and guide
 ├── SPECIFICATION.md            # Intent Invariant Document (this file)
+├── AGENTS.md                   # Operational Directives & UI Aesthetics Protocol
 ├── core.lua                    # Engine core, event loop, coroutines
 ├── init.lua                    # Entry point forwarder
 ├── install.sh                  # Installs lualamp command to ~/.local/bin

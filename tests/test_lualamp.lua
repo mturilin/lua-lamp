@@ -17,13 +17,23 @@ assert(style.colors ~= nil, "Style colors should be populated")
 assert(style.current_theme == "dark", "Default theme should be dark")
 print("[PASS] Engine initialized successfully.")
 
--- 2. Test Font System
+local icons = require "src.icons"
+
+-- 2. Test Font System & Tabler Icons
 assert(style.font_hero ~= nil, "Hero font should be loaded")
 assert(style.font_heading ~= nil, "Heading font should be loaded")
 assert(style.font_normal ~= nil, "Normal font should be loaded")
+assert(style.font_icon ~= nil, "Tabler icon font should be loaded")
+assert(style.font_icon_large ~= nil, "Large Tabler icon font should be loaded")
+
 local text_w = style.font_hero:get_width("Hello, World!")
 assert(text_w > 0, "Hero font width should be greater than 0")
-print("[PASS] Fonts loaded and measured successfully. 'Hello, World!' width:", text_w)
+
+local sun_w = style.font_icon:get_width(icons.sun)
+assert(sun_w > 0, "Tabler outline icon (sun) should have non-zero width")
+local bulb_w = style.font_icon:get_width(icons.bulb_filled)
+assert(bulb_w > 0, "Tabler filled icon (bulb_filled) should have non-zero width")
+print(string.format("[PASS] Fonts loaded and measured successfully. Text width: %.1f, Tabler icon width: %.1f", text_w, sun_w))
 
 -- 3. Test Theme Toggling
 local t1 = style.toggle_theme()

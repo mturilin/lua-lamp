@@ -1,8 +1,9 @@
 import Cocoa
 
 // ============================================================================
-// Lua Lamp — Procedural App Icon Generator
-// Generates Retina macOS .icns and high-res multi-platform PNG icons.
+// Lua Lamp — App Icon Generator
+// Generates Retina macOS .icns and high-res multi-platform PNG icons
+// using the Glowing Retro Lava Lamp artwork.
 // ============================================================================
 
 let size = 1024
@@ -23,229 +24,62 @@ let iconRect = NSRect(x: 100, y: 100, width: 824, height: 824)
 let cornerRadius: CGFloat = 185
 let squirclePath = NSBezierPath(roundedRect: iconRect, xRadius: cornerRadius, yRadius: cornerRadius)
 
-// Soft drop shadow
+// Soft realistic macOS drop shadow
 let shadow = NSShadow()
 shadow.shadowColor = NSColor.black.withAlphaComponent(0.48)
-shadow.shadowOffset = NSSize(width: 0, height: -26)
-shadow.shadowBlurRadius = 38
+shadow.shadowOffset = NSSize(width: 0, height: -24)
+shadow.shadowBlurRadius = 36
 shadow.set()
 
-// Background Gradient: Deep midnight sapphire / Lua navy slate
-let colorSpace = CGColorSpaceCreateDeviceRGB()
-let bgColors = [
-    NSColor(red: 0.08, green: 0.12, blue: 0.22, alpha: 1.0).cgColor, // Top
-    NSColor(red: 0.03, green: 0.05, blue: 0.11, alpha: 1.0).cgColor  // Bottom
-] as CFArray
-let bgLocations: [CGFloat] = [0.0, 1.0]
+// Deep charcoal base matching artwork background
+let darkBg = NSColor(calibratedRed: 16/255.0, green: 16/255.0, blue: 18/255.0, alpha: 1.0)
+darkBg.setFill()
+squirclePath.fill()
 
-if let bgGradient = CGGradient(colorsSpace: colorSpace, colors: bgColors, locations: bgLocations) {
-    ctx.saveGState()
-    squirclePath.addClip()
-    ctx.drawLinearGradient(bgGradient, start: CGPoint(x: 512, y: 924), end: CGPoint(x: 512, y: 100), options: [])
-    ctx.restoreGState()
-}
-
-// Clip everything inside squircle
+// Clip contents within squircle
 ctx.saveGState()
 squirclePath.addClip()
 
-// 3. Subtle background radial orbital rings & technical grid
-ctx.saveGState()
-ctx.setLineWidth(1.8)
-ctx.setStrokeColor(NSColor(red: 0.20, green: 0.35, blue: 0.60, alpha: 0.25).cgColor)
+// Locate artwork source
+let scriptDir = URL(fileURLWithPath: CommandLine.arguments[0]).deletingLastPathComponent().path
+let rootDir = (scriptDir as NSString).deletingLastPathComponent
+let resourcesDir = (rootDir as NSString).appendingPathComponent("resources")
+let homeDir = FileManager.default.homeDirectoryForCurrentUser.path
 
-for r: CGFloat in [160, 260, 360] {
-    ctx.strokeEllipse(in: CGRect(x: 512 - r, y: 530 - r, width: r * 2, height: r * 2))
-}
+let artworkCandidates = [
+    (resourcesDir as NSString).appendingPathComponent("glowing_retro_lava_lamp.png"),
+    (homeDir as NSString).appendingPathComponent("Downloads/Glowing Retro Lava Lamp.png"),
+    (rootDir as NSString).appendingPathComponent("glowing_retro_lava_lamp.png")
+]
 
-// Lua Orbital Moon Accent (upper right)
-let moonCenter = CGPoint(x: 710, y: 730)
-let moonRadius: CGFloat = 34
-ctx.setFillColor(NSColor(red: 0.0, green: 0.0, blue: 0.5, alpha: 0.35).cgColor)
-ctx.fillEllipse(in: CGRect(x: moonCenter.x - moonRadius, y: moonCenter.y - moonRadius, width: moonRadius * 2, height: moonRadius * 2))
-
-let moonGoldColors = [
-    NSColor(red: 0.95, green: 0.75, blue: 0.20, alpha: 0.9).cgColor,
-    NSColor(red: 0.90, green: 0.55, blue: 0.10, alpha: 0.4).cgColor
-] as CFArray
-if let moonGrad = CGGradient(colorsSpace: colorSpace, colors: moonGoldColors, locations: [0.0, 1.0]) {
-    ctx.saveGState()
-    ctx.addEllipse(in: CGRect(x: moonCenter.x - moonRadius, y: moonCenter.y - moonRadius, width: moonRadius * 2, height: moonRadius * 2))
-    ctx.clip()
-    ctx.drawRadialGradient(moonGrad, startCenter: CGPoint(x: moonCenter.x - 8, y: moonCenter.y + 8), startRadius: 2, endCenter: moonCenter, endRadius: moonRadius, options: [])
-    ctx.restoreGState()
-}
-ctx.restoreGState()
-
-// 4. Volumetric Golden Lamp Glow (Ambient Warmth Behind Bulb)
-ctx.saveGState()
-let glowColors = [
-    NSColor(red: 1.0, green: 0.88, blue: 0.45, alpha: 0.55).cgColor, // Bright core
-    NSColor(red: 1.0, green: 0.68, blue: 0.15, alpha: 0.28).cgColor, // Amber bloom
-    NSColor(red: 0.95, green: 0.45, blue: 0.05, alpha: 0.08).cgColor, // Outer halo
-    NSColor(red: 0.95, green: 0.45, blue: 0.05, alpha: 0.0).cgColor   // Fade
-] as CFArray
-let glowLocations: [CGFloat] = [0.0, 0.30, 0.65, 1.0]
-if let glowGrad = CGGradient(colorsSpace: colorSpace, colors: glowColors, locations: glowLocations) {
-    let bulbCenter = CGPoint(x: 512, y: 550)
-    ctx.drawRadialGradient(glowGrad, startCenter: bulbCenter, startRadius: 20, endCenter: bulbCenter, endRadius: 280, options: [])
-}
-ctx.restoreGState()
-
-// 5. Stylized Modern Lamp / Lightbulb Illustration
-// A. Bulb Glass Silhouette
-let bulbCenter = CGPoint(x: 512, y: 565)
-let bulbRadius: CGFloat = 160
-
-// Bulb Path (Sphere dome transitioning into socket neck)
-let bulbPath = CGMutablePath()
-// Start at neck left
-let neckY: CGFloat = 390
-let neckHalfWidth: CGFloat = 72
-bulbPath.move(to: CGPoint(x: 512 - neckHalfWidth, y: neckY))
-// Curve outwards to bottom of sphere
-bulbPath.addCurve(
-    to: CGPoint(x: 512 - bulbRadius, y: bulbCenter.y),
-    control1: CGPoint(x: 512 - neckHalfWidth, y: 440),
-    control2: CGPoint(x: 512 - bulbRadius, y: 490)
-)
-// Top dome arc
-bulbPath.addArc(center: bulbCenter, radius: bulbRadius, startAngle: .pi, endAngle: 0, clockwise: true)
-// Curve inwards from right side back down to neck right
-bulbPath.addCurve(
-    to: CGPoint(x: 512 + neckHalfWidth, y: neckY),
-    control1: CGPoint(x: 512 + bulbRadius, y: 490),
-    control2: CGPoint(x: 512 + neckHalfWidth, y: 440)
-)
-bulbPath.closeSubpath()
-
-// Glass Interior Tint
-ctx.saveGState()
-let glassColors = [
-    NSColor(red: 1.0, green: 0.95, blue: 0.80, alpha: 0.22).cgColor,
-    NSColor(red: 0.20, green: 0.30, blue: 0.50, alpha: 0.12).cgColor
-] as CFArray
-if let glassGrad = CGGradient(colorsSpace: colorSpace, colors: glassColors, locations: [0.0, 1.0]) {
-    ctx.addPath(bulbPath)
-    ctx.clip()
-    ctx.drawLinearGradient(glassGrad, start: CGPoint(x: 512, y: bulbCenter.y + bulbRadius), end: CGPoint(x: 512, y: neckY), options: [])
-}
-ctx.restoreGState()
-
-// Glass Stroke
-ctx.saveGState()
-ctx.setLineWidth(5.0)
-ctx.setStrokeColor(NSColor(red: 1.0, green: 0.92, blue: 0.65, alpha: 0.75).cgColor)
-ctx.addPath(bulbPath)
-ctx.strokePath()
-ctx.restoreGState()
-
-// B. Filament Mount Supports
-ctx.saveGState()
-ctx.setLineWidth(4.0)
-ctx.setStrokeColor(NSColor(red: 0.7, green: 0.65, blue: 0.55, alpha: 0.7).cgColor)
-// Left support wire
-ctx.move(to: CGPoint(x: 480, y: neckY + 10))
-ctx.addLine(to: CGPoint(x: 472, y: 520))
-ctx.strokePath()
-// Right support wire
-ctx.move(to: CGPoint(x: 544, y: neckY + 10))
-ctx.addLine(to: CGPoint(x: 552, y: 520))
-ctx.strokePath()
-ctx.restoreGState()
-
-// C. Glowing Incandescent Filament ("L" shaped loop for Lua Lamp!)
-ctx.saveGState()
-let filamentPath = CGMutablePath()
-filamentPath.move(to: CGPoint(x: 472, y: 520))
-filamentPath.addCurve(to: CGPoint(x: 450, y: 590), control1: CGPoint(x: 460, y: 550), control2: CGPoint(x: 450, y: 570))
-filamentPath.addCurve(to: CGPoint(x: 512, y: 645), control1: CGPoint(x: 450, y: 625), control2: CGPoint(x: 480, y: 645))
-filamentPath.addCurve(to: CGPoint(x: 574, y: 590), control1: CGPoint(x: 544, y: 645), control2: CGPoint(x: 574, y: 625))
-filamentPath.addCurve(to: CGPoint(x: 552, y: 520), control1: CGPoint(x: 574, y: 570), control2: CGPoint(x: 564, y: 550))
-
-// Multi-pass bloom for high-intensity glow
-// Outer bloom
-ctx.setLineWidth(24.0)
-ctx.setStrokeColor(NSColor(red: 1.0, green: 0.65, blue: 0.05, alpha: 0.35).cgColor)
-ctx.setLineCap(.round)
-ctx.addPath(filamentPath)
-ctx.strokePath()
-
-// Mid bloom
-ctx.setLineWidth(14.0)
-ctx.setStrokeColor(NSColor(red: 1.0, green: 0.85, blue: 0.20, alpha: 0.75).cgColor)
-ctx.addPath(filamentPath)
-ctx.strokePath()
-
-// Core hot white-gold filament wire
-ctx.setLineWidth(6.0)
-ctx.setStrokeColor(NSColor(red: 1.0, green: 0.98, blue: 0.90, alpha: 1.0).cgColor)
-ctx.addPath(filamentPath)
-ctx.strokePath()
-ctx.restoreGState()
-
-// D. Lamp Base / Metallic Screw Threads
-let socketBaseY: CGFloat = neckY
-let socketHeight: CGFloat = 110
-let socketWidth: CGFloat = 136
-let socketX: CGFloat = 512 - socketWidth / 2
-
-// Thread ribs (cylindrical segments)
-let threadCount = 4
-let threadH: CGFloat = 20
-for i in 0..<threadCount {
-    let ty = socketBaseY - CGFloat(i + 1) * (threadH + 2)
-    let tw = socketWidth - CGFloat(i * 4)
-    let tx = 512 - tw / 2
-    let threadRect = CGRect(x: tx, y: ty, width: tw, height: threadH)
-    let threadPath = NSBezierPath(roundedRect: threadRect, xRadius: 8, yRadius: 8)
-    
-    // Metallic gradient: Brushed steel & brass
-    let brassColors = [
-        NSColor(red: 0.70, green: 0.58, blue: 0.36, alpha: 1.0).cgColor,
-        NSColor(red: 0.92, green: 0.82, blue: 0.58, alpha: 1.0).cgColor,
-        NSColor(red: 0.50, green: 0.40, blue: 0.22, alpha: 1.0).cgColor
-    ] as CFArray
-    if let brassGrad = CGGradient(colorsSpace: colorSpace, colors: brassColors, locations: [0.0, 0.5, 1.0]) {
-        ctx.saveGState()
-        threadPath.addClip()
-        ctx.drawLinearGradient(brassGrad, start: CGPoint(x: tx, y: ty), end: CGPoint(x: tx + tw, y: ty), options: [])
-        ctx.restoreGState()
+var loadedImage: NSImage?
+for path in artworkCandidates {
+    if FileManager.default.fileExists(atPath: path), let img = NSImage(contentsOfFile: path) {
+        loadedImage = img
+        break
     }
 }
 
-// Bottom Contact Tip (black insulator and metal contact)
-let insulatorY = socketBaseY - CGFloat(threadCount) * (threadH + 2) - 16
-let insulatorRect = CGRect(x: 512 - 34, y: insulatorY, width: 68, height: 18)
-ctx.setFillColor(NSColor(red: 0.15, green: 0.15, blue: 0.18, alpha: 1.0).cgColor)
-ctx.fillEllipse(in: insulatorRect)
+if let lavaImg = loadedImage {
+    // Center the glowing retro lava lamp inside the squircle
+    // Scale slightly (0.95) to give the metallic tip and base elegant breathing room
+    let scale: CGFloat = 0.95
+    let drawW = 824.0 * scale
+    let drawH = 824.0 * scale
+    let drawX = 100.0 + (824.0 - drawW) / 2.0
+    let drawY = 100.0 + (824.0 - drawH) / 2.0
+    lavaImg.draw(in: NSRect(x: drawX, y: drawY, width: drawW, height: drawH),
+                 from: NSRect(origin: .zero, size: lavaImg.size),
+                 operation: .sourceOver,
+                 fraction: 1.0)
+} else {
+    print("Warning: Glowing Retro Lava Lamp artwork not found, falling back to background")
+}
 
-let contactRect = CGRect(x: 512 - 18, y: insulatorY - 8, width: 36, height: 14)
-ctx.setFillColor(NSColor(red: 0.65, green: 0.65, blue: 0.70, alpha: 1.0).cgColor)
-ctx.fillEllipse(in: contactRect)
-
-// 6. Glass Highlights & Gloss Reflection (Top-left curved specular arc)
-ctx.saveGState()
-let specPath = CGMutablePath()
-specPath.addArc(center: bulbCenter, radius: bulbRadius - 16, startAngle: .pi * 0.65, endAngle: .pi * 0.88, clockwise: false)
-ctx.setLineWidth(9.0)
-ctx.setLineCap(.round)
-ctx.setStrokeColor(NSColor(white: 1.0, alpha: 0.45).cgColor)
-ctx.addPath(specPath)
-ctx.strokePath()
-ctx.restoreGState()
-
-// 7. Subtle "LUA LAMP" bottom typography banner
-let bannerY: CGFloat = 150
-let titleAttributes: [NSAttributedString.Key: Any] = [
-    .font: NSFont.systemFont(ofSize: 46, weight: .black),
-    .foregroundColor: NSColor(red: 0.95, green: 0.85, blue: 0.40, alpha: 0.92),
-    .kern: 5.0
-]
-let titleStr = NSAttributedString(string: "LUA LAMP", attributes: titleAttributes)
-let titleSize = titleStr.size()
-let titleOrigin = CGPoint(x: 512 - titleSize.width / 2, y: bannerY)
-titleStr.draw(at: titleOrigin)
+// Subtle inner border highlight
+ctx.setLineWidth(1.5)
+ctx.setStrokeColor(NSColor.white.withAlphaComponent(0.12).cgColor)
+squirclePath.stroke()
 
 ctx.restoreGState() // End squircle clip
 image.unlockFocus()
@@ -262,9 +96,6 @@ guard let tiffData = image.tiffRepresentation,
 }
 
 let fileManager = FileManager.default
-let scriptDir = URL(fileURLWithPath: CommandLine.arguments[0]).deletingLastPathComponent().path
-let rootDir = (scriptDir as NSString).deletingLastPathComponent
-let resourcesDir = (rootDir as NSString).appendingPathComponent("resources")
 let outPng = (resourcesDir as NSString).appendingPathComponent("icon.png")
 let outIcns = (rootDir as NSString).appendingPathComponent("LuaLamp.icns")
 
@@ -317,11 +148,14 @@ for px in [16, 32, 48, 64, 128, 256, 512] {
     try? task.run()
     task.waitUntilExit()
 }
+
 // Copy 256x256 as default resources/lualamp.png
 let defaultLinuxPng = (resourcesDir as NSString).appendingPathComponent("lualamp.png")
+try? fileManager.removeItem(atPath: defaultLinuxPng)
 try? fileManager.copyItem(atPath: (resourcesDir as NSString).appendingPathComponent("lualamp_256x256.png"), toPath: defaultLinuxPng)
 
 // Run iconutil to create .icns
+try? fileManager.removeItem(atPath: outIcns)
 let iconutilTask = Process()
 iconutilTask.executableURL = URL(fileURLWithPath: "/usr/bin/iconutil")
 iconutilTask.arguments = ["-c", "icns", iconsetDir, "-o", outIcns]
@@ -334,4 +168,4 @@ if fileManager.fileExists(atPath: outIcns) {
     print("Warning: iconutil could not generate .icns")
 }
 
-print("✓ All icon assets successfully generated for macOS and Linux!")
+print("✓ All icon assets successfully generated for macOS and Linux with Glowing Retro Lava Lamp!")

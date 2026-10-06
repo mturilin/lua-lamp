@@ -196,9 +196,10 @@ lua-lamp/
 ├── init.lua                    # Entry point forwarder
 ├── src/
 │   ├── canvas.lua              # Main "Hello World" canvas component
+│   ├── icons.lua               # Tabler Icons codepoints registry
 │   ├── style.lua               # Theme & font management
 │   └── ui.lua                  # Vector drawing primitives & UI components
-├── fonts/                      # TrueType fonts (PublicSans, SourceSans, FontAwesome)
+├── fonts/                      # TrueType fonts (PublicSans, SourceSans, Tabler Icons)
 ├── resources/                  # Icons (PNG, SVG, ICNS)
 ├── scripts/
 │   ├── bundle_macos_app.sh     # macOS .app bundler

@@ -113,18 +113,45 @@ local function safe_load_font(filename, pt_size)
   }
 end
 
+local function safe_load_icon_font(pt_size)
+  local scaled_size = math.max(8, math.floor(pt_size * style.scale))
+  local outline_path = find_font_file("tabler-icons.ttf")
+  local filled_path = find_font_file("tabler-icons-filled.ttf")
+
+  if outline_path and renderer and renderer.font and renderer.font.load then
+    local ok_o, outline = pcall(renderer.font.load, outline_path, scaled_size)
+    if ok_o and outline then
+      if filled_path and renderer.font.group then
+        local ok_f, filled = pcall(renderer.font.load, filled_path, scaled_size)
+        if ok_f and filled then
+          local ok_g, grouped = pcall(renderer.font.group, { outline, filled })
+          if ok_g and grouped then
+            return grouped
+          end
+        end
+      end
+      return outline
+    end
+  end
+
+  return safe_load_font("tabler-icons.ttf", pt_size)
+end
+
 function style.init_fonts(scale)
   style.scale = scale or tonumber(os.getenv("LUALAMP_SCALE") or os.getenv("LITE_SCALE")) or 1
 
   -- Primary UI fonts
-  style.font_hero    = safe_load_font("PublicSans-Bold.ttf", 38)
-  style.font_title   = safe_load_font("PublicSans-Bold.ttf", 26)
-  style.font_heading = safe_load_font("PublicSans-SemiBold.ttf", 18)
-  style.font_large   = safe_load_font("PublicSans-Medium.ttf", 16)
-  style.font_normal  = safe_load_font("PublicSans-Regular.ttf", 14)
-  style.font_small   = safe_load_font("PublicSans-Regular.ttf", 12)
-  style.font_mono    = safe_load_font("SourceSans3-Regular.ttf", 13)
-  style.font_icon    = safe_load_font("fontawesome.ttf", 16)
+  style.font_hero       = safe_load_font("PublicSans-Bold.ttf", 38)
+  style.font_title      = safe_load_font("PublicSans-Bold.ttf", 26)
+  style.font_heading    = safe_load_font("PublicSans-SemiBold.ttf", 18)
+  style.font_large      = safe_load_font("PublicSans-Medium.ttf", 16)
+  style.font_normal     = safe_load_font("PublicSans-Regular.ttf", 14)
+  style.font_small      = safe_load_font("PublicSans-Regular.ttf", 12)
+  style.font_mono       = safe_load_font("SourceSans3-Regular.ttf", 13)
+
+  -- Tabler Icons font (grouped outline + filled)
+  style.font_icon       = safe_load_icon_font(18)
+  style.font_icon_large = safe_load_icon_font(24)
 end
 
 return style

@@ -4,6 +4,7 @@
 
 local style = require "src.style"
 local ui = require "src.ui"
+local icons = require "src.icons"
 
 local canvas = {
   lamp_on = true,
@@ -165,7 +166,7 @@ function canvas.draw(win_w, win_h)
 
   -- 8. Technology Pills / Badges
   text_y = text_y + style.font_normal:get_height() + math.floor(18 * s)
-  local badges = { "Lua 5.4", "SDL2 Platform", "60 FPS Compositor", "Cross-Platform" }
+  local badges = { "Lua 5.4", "SDL2 Platform", "Tabler Icons", "60 FPS Compositor" }
   local total_badge_w = 0
   local badge_widths = {}
   for i, b in ipairs(badges) do
@@ -183,8 +184,8 @@ function canvas.draw(win_w, win_h)
 
   -- 9. Interactive Action Buttons
   text_y = text_y + math.floor(36 * s)
-  local btn_w = math.floor(150 * s)
-  local btn_h = math.floor(32 * s)
+  local btn_w = math.floor(160 * s)
+  local btn_h = math.floor(34 * s)
   local btn_gap = math.floor(16 * s)
   local btn_total = btn_w * 2 + btn_gap
 
@@ -193,17 +194,21 @@ function canvas.draw(win_w, win_h)
 
   -- Button 1: Toggle Theme
   canvas.hover_theme_btn = ui.point_in_rect(canvas.mouse_x, canvas.mouse_y, b1_x, text_y, btn_w, btn_h)
-  local b1_bg = canvas.hover_theme_btn and c.surface_hover or c.surface_active
-  ui.draw_rounded_box(b1_x, text_y, btn_w, btn_h, 6 * s, b1_bg, c.border, 1)
-  local theme_label = (style.current_theme == "dark") and "☀  Light Theme" or "☾  Dark Theme"
-  ui.draw_centered_text(style.font_normal, theme_label, b1_x, text_y, btn_w, btn_h, c.text_primary)
+  local b1_bg = canvas.hover_theme_btn and c.surface_active or c.surface_hover
+  ui.draw_rounded_box(b1_x, text_y, btn_w, btn_h, 7 * s, b1_bg, nil, 0)
+  local theme_icon = (style.current_theme == "dark") and icons.sun or icons.moon
+  local theme_label = (style.current_theme == "dark") and "Light Theme" or "Dark Theme"
+  local theme_icon_col = (style.current_theme == "dark") and c.lamp_gold or c.text_secondary
+  ui.draw_centered_icon_and_text(style.font_icon, theme_icon, style.font_normal, theme_label, b1_x, text_y, btn_w, btn_h, theme_icon_col, c.text_primary, 8 * s)
 
   -- Button 2: Toggle Lamp
   canvas.hover_pulse_btn = ui.point_in_rect(canvas.mouse_x, canvas.mouse_y, b2_x, text_y, btn_w, btn_h)
-  local b2_bg = canvas.hover_pulse_btn and c.surface_hover or c.surface_active
-  ui.draw_rounded_box(b2_x, text_y, btn_w, btn_h, 6 * s, b2_bg, c.border, 1)
+  local b2_bg = canvas.hover_pulse_btn and c.surface_active or c.surface_hover
+  ui.draw_rounded_box(b2_x, text_y, btn_w, btn_h, 7 * s, b2_bg, nil, 0)
+  local lamp_icon = canvas.lamp_on and icons.bulb_filled or icons.bulb_off
   local lamp_label = canvas.lamp_on and "Turn Lamp Off" or "Turn Lamp On"
-  ui.draw_centered_text(style.font_normal, lamp_label, b2_x, text_y, btn_w, btn_h, c.text_primary)
+  local lamp_icon_col = canvas.lamp_on and c.lamp_gold or c.text_tertiary
+  ui.draw_centered_icon_and_text(style.font_icon, lamp_icon, style.font_normal, lamp_label, b2_x, text_y, btn_w, btn_h, lamp_icon_col, c.text_primary, 8 * s)
 
   -- 10. Live Status Bar Inside Card
   local footer_h = math.floor(34 * s)
