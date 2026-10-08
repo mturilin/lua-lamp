@@ -198,6 +198,39 @@ end)
 ### 4. Adjust Colors & Themes (`src/style.lua`)
 Edit the color tables in `src/style.lua` to brand your application. All typography scales automatically with High-DPI displays via `SCALE`.
 
+### 5. Build Desktop UIs with the Bundled Framework & Widgets
+Lua Lamp bundles the complete UI framework from Lite XL and the Lite XL Widgets library (under the MIT license) in `runtime/`:
+- **Views & Split Panes**: `core.view`, `core.node`, `core.rootview`
+- **Widgets**: `widget` (`Button`, `TextBox`, `CheckBox`, `Toggle`, `Label`, `Dialog`, `MessageBox`, `ListBox`, `TreeList`, `SelectBox`, `ProgressBar`, `NumberBox`)
+- **Scrollbars & Menus**: `core.scrollbar`, `core.contextmenu`, `core.nagview`
+- **Commands & Shortcuts**: `core.command`, `core.keymap`
+- **Rich Text Editor**: `core.docview`, `core.doc`
+
+#### Example: Creating Windows, Elements, and Formatted Text
+```lua
+local Widget = require "widget"
+local Button = require "widget.button"
+local TextBox = require "widget.textbox"
+local Toggle = require "widget.toggle"
+local Label = require "widget.label"
+
+-- 1. Create a parent container panel
+local panel = Widget()
+panel:set_position(40, 40)
+panel:set_size(320, 240)
+
+-- 2. Add modern interactive controls
+local title = Label(panel, "Application Settings")
+local input = TextBox(panel, "Default Value")
+local switch = Toggle(panel, "Enable Feature", true)
+local btn = Button(panel, "Save Changes")
+
+-- 3. Handle user interactions
+btn.on_click = function()
+  print("Saved setting:", input:get_text(), "Feature enabled:", switch.enabled)
+end
+```
+
 ---
 
 ## 📐 Project Architecture
@@ -207,7 +240,7 @@ lua-lamp/
 ├── bin/
 │   ├── lualamp                 # CLI & dev launcher
 │   └── lualamp_bin             # Native C/SDL3 engine binary (gitignored)
-├── core.lua                    # Engine lifecycle, SDL3 loop, coroutine scheduler
+├── core.lua                    # Engine lifecycle, SDL3 loop, coroutine scheduler, RootView
 ├── init.lua                    # Entry point forwarder
 ├── engine/                     # Vendored native C/SDL3 host engine sources
 │   ├── api/                    # C-bindings for system, renderer, font, process
@@ -215,8 +248,11 @@ lua-lamp/
 │   ├── main.c                  # Native entry point and SDL3 initialization
 │   ├── renderer.c              # Software / SDL3 2D rendering pipeline
 │   └── renwindow.c             # SDL3 window management & High-DPI scaling
-├── runtime/                    # Low-level Lua C-binding bridge wrappers
-│   ├── core/                   # Bootstrap (start.lua, process.lua, utf8string.lua)
+├── runtime/                    # Complete UI Framework and Low-Level C-Bindings
+│   ├── colors/                 # Prebuilt color themes (default, monokai, solarized, etc.)
+│   ├── core/                   # UI Core: Object, View, Node, RootView, ScrollBar, Command, Keymap, DocView
+│   ├── libraries/
+│   │   └── widget/             # UI Widgets: Button, TextBox, CheckBox, Toggle, Label, Dialog, ListBox, etc.
 │   ├── renderer.lua            # Renderer Lua bindings
 │   ├── system.lua              # System & window Lua bindings
 │   └── globals.lua             # Global table helpers
@@ -229,13 +265,13 @@ lua-lamp/
 ├── resources/                  # Icons (PNG, SVG, ICNS)
 ├── scripts/
 │   ├── build_engine.sh         # Native C/SDL3 compiler
-│   ├── bundle_macos_app.sh     # macOS .app bundler (embeds libSDL3)
+│   ├── bundle_macos_app.sh     # macOS .app bundler (embeds libSDL3 & UI framework)
 │   ├── create_dmg.sh           # Distributable macOS DMG disk image creator
 │   ├── bundle_linux.sh         # Linux portable & AppImage bundler
 │   ├── build_runtime_linux.sh  # Native Linux C host compiler
 │   └── generate_icon.swift     # Procedural icon generator
 └── tests/
-    └── test_lualamp.lua        # Headless automated test suite
+    └── test_lualamp.lua        # Headless automated test suite (Stages 1-9)
 ```
 
 ---

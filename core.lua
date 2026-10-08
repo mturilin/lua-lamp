@@ -1,5 +1,5 @@
 -- Lua Lamp Main Engine Core & SDL3 Application Lifecycle
--- High-performance, lightweight template for Lua + SDL3 desktop applications.
+-- High-performance, lightweight generic application development platform based on SDL3.
 
 local style = require "src.style"
 local canvas = require "src.canvas"
@@ -11,6 +11,12 @@ local core = {
   threads = {},
   canvas = canvas,
   style = style,
+  clip_rect_stack = { { 0, 0, 0, 0 } },
+  root_view = nil,
+  active_view = nil,
+  cursor_change_req = nil,
+  last_mouse_x = 0,
+  last_mouse_y = 0,
 }
 
 --------------------------------------------------------------------------------
@@ -44,7 +50,41 @@ function core.step_threads()
 end
 
 --------------------------------------------------------------------------------
--- 2. Engine Initialization
+-- 2. Clip Rect & UI View Helpers (for View & Widget framework)
+--------------------------------------------------------------------------------
+
+function core.push_clip_rect(x, y, w, h)
+  local x2, y2, w2, h2 = table.unpack(core.clip_rect_stack[#core.clip_rect_stack])
+  if #core.clip_rect_stack > 1 then
+    local r = math.max(x, x2)
+    local b = math.max(y, y2)
+    local r2 = math.min(x + w, x2 + w2)
+    local b2 = math.min(y + h, y2 + h2)
+    x, y, w, h = r, b, math.max(0, r2 - r), math.max(0, b2 - b)
+  end
+  table.insert(core.clip_rect_stack, { x, y, w, h })
+  renderer.set_clip_rect(x, y, w, h)
+end
+
+function core.pop_clip_rect()
+  table.remove(core.clip_rect_stack)
+  local x, y, w, h = table.unpack(core.clip_rect_stack[#core.clip_rect_stack])
+  renderer.set_clip_rect(x, y, w, h)
+end
+
+function core.request_cursor(cursor)
+  core.cursor_change_req = cursor
+end
+
+function core.set_active_view(view)
+  if core.active_view ~= view then
+    core.active_view = view
+    core.redraw = true
+  end
+end
+
+--------------------------------------------------------------------------------
+-- 3. Engine Initialization
 --------------------------------------------------------------------------------
 
 function core.init()
@@ -65,6 +105,13 @@ function core.init()
   -- Initialize Style, Theme & Typography
   style.init_fonts(SCALE)
 
+  -- Initialize UI View Hierarchy (RootView)
+  local ok, RootView = pcall(require, "core.rootview")
+  if ok and RootView then
+    core.root_view = RootView()
+    core.active_view = core.root_view.root_node.active_view
+  end
+
   -- Initialize Canvas Component
   canvas.init()
 
@@ -72,7 +119,7 @@ function core.init()
 end
 
 --------------------------------------------------------------------------------
--- 3. System Event Dispatcher
+-- 4. System Event Dispatcher
 --------------------------------------------------------------------------------
 
 function core.on_event(type, a, b, c, d)
@@ -86,7 +133,25 @@ function core.on_event(type, a, b, c, d)
 
   local win_w, win_h = renderer.get_size()
 
-  -- Mouse movement
+  -- Forward event to RootView UI tree if present
+  if core.root_view then
+    if type == "mousemoved" then
+      local dx = a - (core.last_mouse_x or a)
+      local dy = b - (core.last_mouse_y or b)
+      core.last_mouse_x, core.last_mouse_y = a, b
+      core.root_view:on_mouse_moved(a, b, dx, dy)
+    elseif type == "mousepressed" then
+      core.root_view:on_mouse_pressed(a, b, c, d or 1)
+    elseif type == "mousereleased" then
+      core.root_view:on_mouse_released(a, b, c)
+    elseif type == "mousewheel" then
+      core.root_view:on_mouse_wheel(b, a)
+    elseif type == "textinput" then
+      core.root_view:on_text_input(a)
+    end
+  end
+
+  -- Mouse movement for canvas
   if type == "mousemoved" then
     local px, py = a, b
     canvas.on_mouse_moved(px, py)
@@ -94,7 +159,7 @@ function core.on_event(type, a, b, c, d)
     return
   end
 
-  -- Mouse button pressed
+  -- Mouse button pressed for canvas
   if type == "mousepressed" then
     local button, px, py = a, b, c
     canvas.on_mouse_pressed(button, px, py, core)
@@ -126,16 +191,31 @@ function core.on_event(type, a, b, c, d)
 end
 
 --------------------------------------------------------------------------------
--- 4. Frame Rendering Compositor
+-- 5. Frame Rendering Compositor
 --------------------------------------------------------------------------------
 
 function core.draw()
   local win_w, win_h = renderer.get_size()
+  core.clip_rect_stack[1] = { 0, 0, win_w, win_h }
+  renderer.set_clip_rect(0, 0, win_w, win_h)
+
+  -- Render base canvas stage
   canvas.draw(win_w, win_h)
+
+  -- Render RootView UI layer & widgets
+  if core.root_view then
+    core.root_view.size.x, core.root_view.size.y = win_w, win_h
+    core.root_view:update()
+    core.root_view:draw()
+    if core.cursor_change_req then
+      system.set_cursor(core.cursor_change_req)
+      core.cursor_change_req = nil
+    end
+  end
 end
 
 --------------------------------------------------------------------------------
--- 5. Main 60 FPS Event Loop
+-- 6. Main 60 FPS Event Loop
 --------------------------------------------------------------------------------
 
 function core.run()
@@ -189,7 +269,7 @@ function core.run()
 end
 
 --------------------------------------------------------------------------------
--- 6. Graceful Error Handling
+-- 7. Graceful Error Handling
 --------------------------------------------------------------------------------
 
 function core.on_error(err)

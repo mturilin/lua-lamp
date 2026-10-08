@@ -1,42 +1,55 @@
 # Lua Lamp — Specification & Intent Invariant Document
 
 > **Document Status**: Authoritative Source of Truth  
-> **Application**: Lua Lamp (Cross-Platform Lua + SDL3 Application Starter Template)  
+> **Application**: Lua Lamp (Cross-Platform Generic Application Development Platform based on SDL3)  
 > **Runtime Foundation**: Lua 5.4 + SDL3 + FreeType2 + PCRE2 Host Engine
 
 ---
 
 ## 1. Executive Summary & Vision
 
-**Lua Lamp** is a clean, modern, zero-bloat starter template for building high-performance native desktop applications using **Lua** and **SDL3**.
+**Lua Lamp** is a clean, modern, zero-bloat generic desktop application development platform built on **Lua** and **SDL3**.
 
-It provides a "blank canvas" starting point featuring a centered "Hello, World!" welcome screen, animated glowing lamp iconography, live window/mouse telemetry, and a built-in coroutine scheduler. Crucially, Lua Lamp is 100% self-contained: it vendors its own bespoke native C/SDL3 host engine, builds directly from source without any external text-editor binaries (Lite XL), bundles all dynamic dependencies (`libSDL3.0.dylib`), and includes complete multi-platform bundling pipelines for **macOS** (`.app` bundle and `.dmg` disk image) and **Linux** (standalone portable directory, `.desktop` integration, and AppImage/tarball).
+It serves dual purposes:
+1. **Immediate Starter Presentation**: Out of the box, it displays a responsive, centered "Hello, World!" stage card featuring animated glowing lamp iconography, live telemetry, and interactive click ripples.
+2. **Generic Application Framework**: Under the hood, Lua Lamp bundles the complete, battle-tested UI framework created by Lite XL (under the MIT license) alongside the Lite XL Widgets library. Developers can immediately build native multi-window desktop applications with split panes, dockable views, modern buttons, text inputs, toggles, checkboxes, dialogs, scrollbars, context menus, and command palettes—all rendered at 60 FPS on SDL3 with zero external binary dependencies.
 
 ---
 
 ## 2. Protected Intent Invariants
 
 ### Invariant 1: Blank Canvas Centering
-- On launch, the window must display a centered "Hello, World!" stage card against a clean canvas.
-- The stage card must remain centered dynamically regardless of window resizing or High-DPI display scaling.
-- The canvas must illustrate live interactive feedback: mouse coordinates `(x, y)`, window dimensions `w x h`, frame rate, and animated click ripples.
+- On launch, the window displays a centered "Hello, World!" stage card against a clean canvas.
+- The stage card remains centered dynamically regardless of window resizing or High-DPI display scaling.
+- The canvas illustrates live interactive feedback: mouse coordinates `(x, y)`, window dimensions `w x h`, frame rate, and animated click ripples.
 
-### Invariant 2: Zero Text-Editor & External Binary Dependency
-- Lua Lamp **MUST NOT** import or depend on Lite XL binaries or text editor modules (`core.doc`, `core.docview`, `core.statusview`, `core.commandview`, etc.).
-- Lua Lamp vendors its complete native C host engine in `engine/` and Lua C-bridge wrappers in `runtime/`.
-- All application logic lives in `core.lua` and `src/`.
-- The application relies exclusively on the underlying C/SDL3 host runtime primitives (`renderer`, `system`, `process`, `renderer.font`).
+### Invariant 2: Zero External Binary Dependency & MIT UI Framework Integration
+- **Zero Binary Dependency**: Lua Lamp **DOES NOT** depend on Lite XL binaries, CLI tools, or external installations. The native C host engine (`engine/`) compiles independently from source, statically embedding Lua 5.4.7 and bundling `libSDL3.0.dylib`.
+- **Bundled MIT UI Framework Layer**: Lua Lamp bundles Lite XL's pure-Lua UI framework and Widgets library (MIT license) in `runtime/` for building generic desktop software:
+  - `core.object`: Object-oriented prototype inheritance (`Object:extend()`).
+  - `core.view`: Base visual component with bounds, clipping, smooth scrolling, cursor styling, and event handlers.
+  - `core.node`: Tree-based split-pane layout manager (horizontal/vertical splits, tabs, draggable dividers).
+  - `core.rootview`: Top-level window manager and event dispatcher.
+  - `core.scrollbar`: Smooth animated scrollbars.
+  - `core.contextmenu`: Contextual popup menus.
+  - `core.nagview`: Notification banners and modal toasts.
+  - `core.command` & `core.keymap`: Command palette and declarative keyboard shortcuts.
+  - `core.common`: Math, color manipulation, path, and text helpers.
+  - `core.config` & `core.style`: Global style tokens and theme management.
+  - `core.docview` & `core.doc`: Syntax-highlighted rich text views and document models.
+  - `widget` / `libraries.widget`: Ready-to-use GUI controls (`Button`, `TextBox`, `CheckBox`, `Toggle`, `Label`, `ListBox`, `TreeList`, `SelectBox`, `ProgressBar`, `NumberBox`, `Dialog`, `MessageBox`, etc.).
 
 ### Invariant 3: Native Cross-Platform Packaging
 - **macOS**: Must produce a 100% standalone `Lua Lamp.app` bundle in `dist/` and distributable `dist/LuaLamp-1.0.0.dmg` with:
   - Native Mach-O executable in `Contents/MacOS/lualamp`.
   - Self-contained `Contents/MacOS/libSDL3.0.dylib` linked via `@executable_path/libSDL3.0.dylib`.
+  - Bundled UI framework, widgets, and themes in `Contents/Resources/`.
   - Multi-resolution Retina icon `Contents/Resources/icon.icns` (16x16 through 1024x1024).
   - Standalone `Info.plist` with proper bundle identifiers (`com.lualamp.app`).
   - Recursive quarantine clearing (`xattr -cr`) and ad-hoc code signing (`codesign --force --deep -s -`).
 - **Linux**: Must produce a standalone portable directory `lualamp-linux-$ARCH` and `.tar.gz` in `dist/` with:
   - Native ELF executable in `bin/lualamp`.
-  - Self-contained `data/` directory housing all Lua code, fonts, and assets.
+  - Self-contained `data/` directory housing all Lua code, UI framework, widgets, fonts, and assets.
   - Freedesktop-compliant `lualamp.desktop` and icons.
 
 ### Invariant 4: Non-Blocking Asynchronous Execution
@@ -50,7 +63,7 @@ It provides a "blank canvas" starting point featuring a centered "Hello, World!"
 
 ### Invariant 6: Automated Verification Contract
 - Every distribution must pass the automated headless test suite (`bin/lualamp --test` or `tests/test_lualamp.lua`) with zero assertion failures.
-- Headless execution tests engine boot, font loading, theme toggling, canvas animation state, vector drawing, and event dispatching.
+- Headless execution tests engine boot, font loading, theme toggling, canvas animation state, vector drawing, event dispatching, and UI framework widget initialization (`Object`, `View`, `Node`, `RootView`, `Widget`, `Button`, `Label`, `Toggle`, `TextBox`, `Dialog`).
 
 ### Invariant 7: Optical Baseline & UI Alignment Invariant
 - Text, labels, and badges must never be vertically aligned by naive line-height division alone (`math.floor((h - font:get_height()) / 2)`), which produces an optical upward drift of 1–2px due to Latin font descender reservations.
@@ -85,12 +98,11 @@ lua-lamp/
 │   ├── tabler-icons.ttf        # Tabler Icons (outline)
 │   └── tabler-icons-filled.ttf # Tabler Icons (filled)
 ├── resources/                  # Application branding and vector assets
-│   ├── icon.png                # Master 1024x1024 Retina icon
-│   ├── lualamp.svg             # Scalable vector icon
-│   ├── lualamp.png             # 256x256 Linux desktop icon
-│   └── lualamp_*.png           # Multi-resolution PNG icon variants
-├── runtime/                    # Low-level Lua C-binding bridge wrappers
-│   ├── core/                   # Core bootstrap (start.lua, process.lua, utf8string.lua, bit.lua)
+├── runtime/                    # Complete UI Framework and Low-Level C-Bindings
+│   ├── colors/                 # Prebuilt color themes (default, monokai, solarized, etc.)
+│   ├── core/                   # UI Core: Object, View, Node, RootView, ScrollBar, Command, Keymap, DocView
+│   ├── libraries/
+│   │   └── widget/             # UI Widgets: Button, TextBox, CheckBox, Toggle, Label, Dialog, ListBox, etc.
 │   ├── renderer.lua            # Renderer Lua bindings
 │   ├── system.lua              # System & window Lua bindings
 │   ├── process.lua             # Subprocess Lua bindings
@@ -109,13 +121,13 @@ lua-lamp/
 │   ├── style.lua               # Theme management (dark/light) & font loader
 │   └── ui.lua                  # Reusable drawing primitives & UI components
 ├── tests/
-│   └── test_lualamp.lua        # Headless automated verification suite
+│   └── test_lualamp.lua        # Headless automated verification suite (Stages 1-9)
 ├── Dockerfile                  # Containerized Linux build environment
 ├── LICENSE                     # MIT Open Source License
 ├── README.md                   # User documentation and guide
 ├── SPECIFICATION.md            # Intent Invariant Document (this file)
 ├── AGENTS.md                   # Operational Directives & UI Aesthetics Protocol
-├── core.lua                    # Engine core, event loop, coroutines
+├── core.lua                    # Engine core, event loop, coroutines, RootView host
 ├── init.lua                    # Entry point forwarder
 ├── install.sh                  # Installs lualamp command to ~/.local/bin
 └── LuaLamp.icns                # Multi-resolution macOS iconset
@@ -125,34 +137,32 @@ lua-lamp/
 
 ## 4. Subsystem Contracts
 
-### 4.1 Native Host Engine (`engine/`) & Runtime (`runtime/`)
+### 4.1 Native Host Engine (`engine/`)
 - Pure C / SDL3 host runtime linking FreeType2, PCRE2, and system frameworks.
 - Statically embeds Lua 5.4.7 core interpreter.
 - Exposes native C modules: `system`, `renderer`, `process`, `regex`, `dirmonitor`.
-- Resolves macOS bundle paths via `[NSBundle mainBundle]` only when executing from an `.app` container (`MACOS_RESOURCES`), falling back seamlessly to repository paths in CLI development mode.
+- Zero external runtime dependency.
 
-### 4.2 Engine Core (`core.lua`)
-- **`core.init()`**: Configures window size (default `960x640 * SCALE`), window title, loads typography, and initializes canvas state.
-- **`core.on_event(type, a, b, c, d)`**: Dispatches events (`quit`, `resized`, `mousemoved`, `mousepressed`, `keypressed`).
-- **`core.step_threads()`**: Manages coroutine wake times and execution.
-- **`core.draw()`**: Invokes `canvas.draw(win_w, win_h)`.
-- **`core.run()`**: Executes 60 FPS event loop with delta-time `dt` calculation.
-- **`core.on_error(err)`**: Catches runtime errors, prints stack traces, writes diagnostic logs, and raises fatal error dialogs.
+### 4.2 Application Engine Core (`core.lua`)
+- **`core.init()`**: Configures window size, High-DPI scaling factor, initializes fonts, instantiates `core.root_view` (`RootView`), and sets up the canvas.
+- **`core.root_view`**: Top-level container managing split nodes, floating overlays, dialogs, and event routing.
+- **`core.push_clip_rect` / `core.pop_clip_rect`**: Nested hierarchical clipping stack.
+- **`core.request_cursor(cursor)`**: Dynamic cursor style requests (`arrow`, `ibeam`, `hand`, `sizeh`, `sizev`).
+- **`core.on_event(type, a, b, c, d)`**: Routes SDL3 events to `core.root_view` (mouse, keyboard, text input, wheel) and canvas handlers.
+- **`core.step_threads()`**: Manages coroutine wake times and asynchronous workers.
+- **`core.draw()`**: Composites base canvas and all active views/widgets in `core.root_view`.
+- **`core.run()`**: 60 FPS event loop with delta-time calculation and power-saving frame sleep.
 
-### 4.3 Blank Canvas Component (`src/canvas.lua`)
-- Renders the stage card with:
-  - Vector glowing lamp with warm radial bloom.
-  - "Hello, World!" heading.
-  - "Welcome to Lua Lamp" title and descriptive subtitle.
-  - Technology badges (`Lua 5.4`, `SDL3 Platform`, `60 FPS Compositor`).
-  - Interactive Theme Toggle and Lamp Pulse buttons.
-  - Live coordinate and telemetry readout.
-  - Interactive click ripple waves.
+### 4.3 UI Layer Framework (`runtime/core/` & `runtime/libraries/widget/`)
+- **`View`**: Base class for visual components with positioning, size, clip bounds, smooth scrolling, and mouse/keyboard lifecycle hooks.
+- **`Node`**: Split pane container supporting horizontal/vertical splits, tabs, and interactive resizing dividers.
+- **`Widget`**: Hierarchy-aware base control with parent/child geometry, relative coordinates, hover states, click events, animations, and tooltips.
+- **Widget Controls**: Ready-to-use UI controls including `Button`, `TextBox`, `CheckBox`, `Toggle`, `Label`, `Dialog`, `MessageBox`, `InputDialog`, `ListBox`, `TreeList`, `SelectBox`, `ProgressBar`, `NumberBox`, etc.
 
-### 4.4 Style & Theme System (`src/style.lua`)
+### 4.4 Style & Theme System (`src/style.lua` & `runtime/core/style.lua`)
 - Supports Dark Theme (default) and Light Theme.
 - Exposes `style.colors`, `style.set_theme(name)`, and `style.toggle_theme()`.
-- Dynamically loads TTF fonts from `fonts/` with graceful fallback handling.
+- Dynamically resolves and loads TTF fonts from `fonts/` (`PublicSans`, `SourceSans3`, `tabler-icons`).
 
 ---
 
@@ -163,7 +173,7 @@ lua-lamp/
 | <kbd>Space</kbd> | `keypressed` | Toggle central lamp filament glow & bloom |
 | <kbd>T</kbd> | `keypressed` | Toggle theme between Dark and Light |
 | <kbd>F11</kbd> | `keypressed` | Toggle Fullscreen window mode |
-| <kbd>Left Click</kbd> | `mousepressed` | Spawn expanding radial ripple at click coordinates |
+| <kbd>Left Click</kbd> | `mousepressed` | Spawn expanding radial ripple at click coordinates / trigger widget |
 | <kbd>Q</kbd> / <kbd>Esc</kbd> | `keypressed` | Cleanly terminate application |
 
 ---
@@ -171,17 +181,16 @@ lua-lamp/
 ## 6. Build & Packaging Pipelines
 
 ### Native Engine Compilation (`./scripts/build_engine.sh`)
-1. Detects Homebrew prefix and validates SDL3, FreeType, PCRE2, and libpng dependencies.
+1. Validates Homebrew dependencies (`sdl3`, `freetype`, `pcre2`, `libpng`).
 2. Compiles `engine/` sources into standalone `bin/lualamp_bin` with static FreeType/PCRE2 linking.
 
 ### macOS Bundle (`./scripts/bundle_macos_app.sh`)
 1. Builds native C/SDL3 engine via `scripts/build_engine.sh`.
 2. Creates `dist/Lua Lamp.app` bundle directory tree.
 3. Installs Mach-O binary and embeds `libSDL3.0.dylib` with `@executable_path` dynamic load path rewriting.
-4. Installs runtime bridge scripts from `runtime/`.
-5. Copies `core.lua`, `src/`, `fonts/`, and `LuaLamp.icns`.
-6. Generates `Info.plist`, clears quarantine flags (`xattr -cr`), and applies ad-hoc codesign.
-7. Deploys bundle to `/Applications/Lua Lamp.app`.
+4. Installs UI framework, widgets, themes, application source, and fonts into `Contents/Resources/`.
+5. Clears quarantine flags (`xattr -cr`) and applies ad-hoc codesign.
+6. Deploys bundle to `/Applications/Lua Lamp.app`.
 
 ### macOS Disk Image (`./scripts/create_dmg.sh`)
 1. Rebuilds fresh `dist/Lua Lamp.app`.
@@ -190,7 +199,7 @@ lua-lamp/
 4. Performs checksum verification (`hdiutil verify`).
 
 ### Linux (`./scripts/bundle_linux.sh`)
-1. Resolves local Linux ELF runtime binary or downloads prebuilt binary from release.
-2. Creates `dist/lualamp-linux-$ARCH/` containing `bin/lualamp`, `data/`, `lualamp.desktop`, and icon assets.
+1. Resolves Linux ELF runtime binary.
+2. Creates `dist/lualamp-linux-$ARCH/` containing `bin/lualamp`, `data/` (with UI framework & widgets), `lualamp.desktop`, and icon assets.
 3. Packages portable `lualamp-linux-$ARCH.tar.gz`.
 4. Optionally produces `.AppImage` if `appimagetool` is available.

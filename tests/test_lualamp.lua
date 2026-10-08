@@ -104,6 +104,35 @@ assert(style.current_theme == cur_theme, "Second T key should restore theme")
 
 print("[PASS] Mouse and keyboard event dispatching verified.")
 
+-- 9. Test UI Layer Framework Primitives & Widgets
+local Object = require "core.object"
+local View = require "core.view"
+local Node = require "core.node"
+local RootView = require "core.rootview"
+local Widget = require "widget"
+local Button = require "widget.button"
+local Label = require "widget.label"
+local Toggle = require "widget.toggle"
+local TextBox = require "widget.textbox"
+local Dialog = require "widget.dialog"
+
+assert(Object ~= nil and View ~= nil and Node ~= nil and RootView ~= nil, "UI core primitives should load")
+assert(Widget ~= nil and Button ~= nil and Label ~= nil and Toggle ~= nil and TextBox ~= nil and Dialog ~= nil, "UI widgets should load")
+
+local panel = Widget()
+panel:set_position(10, 10)
+panel:set_size(240, 160)
+local test_btn = Button(panel, "Action")
+local test_lbl = Label(panel, "Settings")
+local test_tog = Toggle(panel, "Active", true)
+assert(test_btn ~= nil and test_lbl ~= nil and test_tog ~= nil, "Widgets should instantiate properly")
+
+renderer.begin_frame()
+core.draw()
+panel:draw()
+renderer.end_frame()
+print("[PASS] UI Layer (Object, View, Node, RootView, Widgets) verified.")
+
 print("\n========================================")
 print("ALL LUA LAMP VERIFICATION TESTS PASSED!")
 print("========================================")
