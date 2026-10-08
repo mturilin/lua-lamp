@@ -1,6 +1,6 @@
-# 💡 Lua Lamp — Lua & SDL2 Application Starter Template
+# 💡 Lua Lamp — Native Lua & SDL3 Application Starter Template
 
-A modern, high-performance, cross-platform desktop application starter kit built on the **Lua 5.4 + SDL2** platform.
+A modern, high-performance, cross-platform desktop application starter kit built on a **bespoke native Lua 5.4 + SDL3** host engine. Completely self-contained with **zero Lite XL binary dependencies**.
 
 ```
 +-----------------------------------------------------------------------------------------+
@@ -14,9 +14,9 @@ A modern, high-performance, cross-platform desktop application starter kit built
 |                    |                                               |                    |
 |                    |                Hello, World!                  |                    |
 |                    |             Welcome to Lua Lamp               |                    |
-|                    |  A lightweight Lua & SDL2 starter template    |                    |
+|                    |  A lightweight Lua & SDL3 starter template    |                    |
 |                    |                                               |                    |
-|                    | [Lua 5.4] [SDL2 Platform] [60 FPS Compositor] |                    |
+|                    | [Lua 5.4] [SDL3 Platform] [60 FPS Compositor] |                    |
 |                    |                                               |                    |
 |                    |   [ ☀ Light Theme ]     [ Turn Lamp Off ]     |                    |
 |                    |                                               |                    |
@@ -38,11 +38,14 @@ A modern, high-performance, cross-platform desktop application starter kit built
   - Live window telemetry: dynamic canvas dimensions, live mouse coordinates, and FPS counter.
   - Interactive click ripple waves expanding outward from cursor clicks.
   - Built-in theme switcher (Dark Mode & Light Mode).
-- **Zero Text-Editor Bloat**:
-  - Completely stripped of text editor dependencies (`core.doc`, `core.docview`, etc.).
-  - Direct access to underlying SDL2 graphics, system events, and native OS APIs.
+- **100% Independent Native Engine (Zero Lite XL Dependency)**:
+  - Vendors its own native C/SDL3 host engine in `engine/` linking FreeType2, PCRE2, and system frameworks.
+  - Compiles directly with `clang` via `scripts/build_engine.sh`.
+  - Statically embeds Lua 5.4.7 core interpreter.
+  - No dependency on external Lite XL binaries or text-editor core modules.
 - **Cross-Platform Bundling Out of the Box**:
-  - **macOS**: One-step script (`./scripts/bundle_macos_app.sh`) generating a standalone `Lua Lamp.app` with custom Retina `.icns` and ad-hoc code signing.
+  - **macOS App Bundle**: One-step script (`./scripts/bundle_macos_app.sh`) generating a standalone `Lua Lamp.app` embedding `libSDL3.0.dylib` with `@executable_path` dynamic load path rewriting, custom Retina `.icns`, and ad-hoc codesigning.
+  - **macOS DMG Disk Image**: Automated script (`./scripts/create_dmg.sh`) producing a compressed, verified drag-and-drop `dist/LuaLamp-1.0.0.dmg`.
   - **Linux**: One-step script (`./scripts/bundle_linux.sh`) generating a portable tarball (`lualamp-linux-x86_64.tar.gz`), `.desktop` file, and AppImage.
   - **Docker**: Cross-compile native Linux binaries from any operating system with a single `docker build`.
 - **Non-Blocking Coroutine Threading**:
@@ -56,18 +59,24 @@ A modern, high-performance, cross-platform desktop application starter kit built
 
 ## 🚀 Quick Start
 
-### 1. Launch in Development Mode
+### 1. Prerequisites (macOS)
 ```bash
-# Run using the development CLI launcher
+# Install host build dependencies via Homebrew
+brew install sdl3 freetype pcre2 libpng
+```
+
+### 2. Build Engine & Launch in Development Mode
+```bash
+# Compiles bin/lualamp_bin if needed and starts the application
 ./bin/lualamp
 ```
 
-### 2. Run Headless Verification Tests
+### 3. Run Headless Verification Tests
 ```bash
 ./bin/lualamp --test
 ```
 
-### 3. Install the CLI Command Globally
+### 4. Install the CLI Command Globally
 ```bash
 ./install.sh
 # Now you can run 'lualamp' from anywhere!
@@ -90,18 +99,24 @@ lualamp
 
 ## 📦 Building for macOS
 
-To bundle a 100% standalone macOS `.app` that can be distributed to users or moved into `/Applications`:
-
+### Standalone `.app` Bundle
+To bundle a 100% standalone macOS `.app` installed into `/Applications`:
 ```bash
 ./scripts/bundle_macos_app.sh
 ```
-
 This will:
-1. Compile the custom Retina `.icns` icon.
+1. Compile the native C/SDL3 engine (`bin/lualamp_bin`).
 2. Assemble `dist/Lua Lamp.app`.
-3. Install all Lua runtime wrappers and application code.
-4. Ad-hoc codesign the bundle.
-5. Symlink/install directly to `/Applications/Lua Lamp.app`.
+3. Embed `libSDL3.0.dylib` and rewrite dynamic load paths via `install_name_tool`.
+4. Install all Lua runtime bridge modules and application code.
+5. Ad-hoc codesign the bundle and install directly to `/Applications/Lua Lamp.app`.
+
+### Distributable `.dmg` Disk Image
+To package a distributable compressed disk image with a drag-and-drop `/Applications` symlink:
+```bash
+./scripts/create_dmg.sh
+```
+Output: `dist/LuaLamp-1.0.0.dmg`.
 
 ---
 
@@ -111,23 +126,21 @@ This will:
 ```bash
 ./scripts/bundle_linux.sh
 ```
-This script resolves the Linux ELF host binary (or downloads the prebuilt platform runtime from GitHub), sets up the `data/` asset folder, writes the `.desktop` launcher, and packages:
+This script packages:
 - `dist/lualamp-linux-x86_64/` (Standalone directory)
 - `dist/lualamp-linux-x86_64.tar.gz` (Portable release archive)
 - `dist/Lua_Lamp-x86_64.AppImage` (If `appimagetool` is installed)
 
 ### Option B: Compile from Source on Linux
-If you are running Linux (Ubuntu, Debian, Fedora, Arch), compile the host C binary from scratch using:
 ```bash
 # Ubuntu/Debian dependencies
-sudo apt-get install -y gcc git meson ninja-build libsdl2-dev libfreetype6-dev libpcre2-dev
+sudo apt-get install -y gcc git meson ninja-build libsdl3-dev libfreetype6-dev libpcre2-dev
 
 # Compile host and bundle release
 ./scripts/build_runtime_linux.sh
 ```
 
 ### Option C: Build Linux Package via Docker (From Any OS)
-If you are on macOS or Windows and want to build the Linux binary without setting up a Linux VM:
 ```bash
 docker build -t lualamp .
 docker run --rm -v $(pwd)/dist:/output lualamp cp -r /app/dist/. /output/
@@ -172,7 +185,7 @@ Events are automatically dispatched in `core.on_event`:
 - `type == "keypressed"`: `key = a:lower()`
 
 ### 3. Run Asynchronous Tasks (`core.add_thread`)
-Never block the frame loop with `io.popen` or `sleep`. Use coroutines instead:
+Never block the frame loop with synchronous sleep or blocking I/O. Use coroutines instead:
 ```lua
 core.add_thread(function()
   while true do
@@ -191,9 +204,22 @@ Edit the color tables in `src/style.lua` to brand your application. All typograp
 
 ```
 lua-lamp/
-├── bin/lualamp                 # CLI & dev launcher
-├── core.lua                    # Engine lifecycle, SDL2 loop, coroutine scheduler
+├── bin/
+│   ├── lualamp                 # CLI & dev launcher
+│   └── lualamp_bin             # Native C/SDL3 engine binary (gitignored)
+├── core.lua                    # Engine lifecycle, SDL3 loop, coroutine scheduler
 ├── init.lua                    # Entry point forwarder
+├── engine/                     # Vendored native C/SDL3 host engine sources
+│   ├── api/                    # C-bindings for system, renderer, font, process
+│   ├── lua/                    # Embedded Lua 5.4.7 interpreter core
+│   ├── main.c                  # Native entry point and SDL3 initialization
+│   ├── renderer.c              # Software / SDL3 2D rendering pipeline
+│   └── renwindow.c             # SDL3 window management & High-DPI scaling
+├── runtime/                    # Low-level Lua C-binding bridge wrappers
+│   ├── core/                   # Bootstrap (start.lua, process.lua, utf8string.lua)
+│   ├── renderer.lua            # Renderer Lua bindings
+│   ├── system.lua              # System & window Lua bindings
+│   └── globals.lua             # Global table helpers
 ├── src/
 │   ├── canvas.lua              # Main "Hello World" canvas component
 │   ├── icons.lua               # Tabler Icons codepoints registry
@@ -202,7 +228,9 @@ lua-lamp/
 ├── fonts/                      # TrueType fonts (PublicSans, SourceSans, Tabler Icons)
 ├── resources/                  # Icons (PNG, SVG, ICNS)
 ├── scripts/
-│   ├── bundle_macos_app.sh     # macOS .app bundler
+│   ├── build_engine.sh         # Native C/SDL3 compiler
+│   ├── bundle_macos_app.sh     # macOS .app bundler (embeds libSDL3)
+│   ├── create_dmg.sh           # Distributable macOS DMG disk image creator
 │   ├── bundle_linux.sh         # Linux portable & AppImage bundler
 │   ├── build_runtime_linux.sh  # Native Linux C host compiler
 │   └── generate_icon.swift     # Procedural icon generator

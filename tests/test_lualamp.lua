@@ -75,7 +75,7 @@ print("[PASS] Coroutine worker thread scheduler verified.")
 
 -- 7. Test Frame Rendering Compositor
 local win_w, win_h = renderer.get_size()
-print(string.format("Testing SDL2 Compositor Frame Rendering (Window: %dx%d)...", math.floor(win_w), math.floor(win_h)))
+print(string.format("Testing SDL3 Compositor Frame Rendering (Window: %dx%d)...", math.floor(win_w), math.floor(win_h)))
 
 renderer.begin_frame()
 core.draw()

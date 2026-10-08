@@ -1,14 +1,25 @@
-# macOS
+# Runtime state and logs
+session.lua
+error.txt
+*.tmp
+*.log
+.cache/
+
+# OS metadata
 .DS_Store
 .AppleDouble
 .LSOverride
+Thumbs.db
 
-# Build artifacts
+# Build artifacts & binaries
+bin/*_bin
+bin/lualamp_bin
+*.o
+*.a
+*.dylib
+*.dylib.dSYM
 dist/
 build/
 build-runtime/
 *.AppImage
-
-# User logs & caches
-*.log
-.cache/
+*.dmg

@@ -1,5 +1,5 @@
 -- Lua Lamp UI Helper Functions & Vector Drawing Primitives
--- Provides reusable drawing components on top of the SDL2 renderer.
+-- Provides reusable drawing components on top of the SDL3 renderer.
 
 local ui = {}
 

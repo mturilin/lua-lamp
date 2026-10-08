@@ -161,12 +161,12 @@ function canvas.draw(win_w, win_h)
   ui.draw_centered_text(style.font_heading, "Welcome to Lua Lamp", card_x, text_y, card_w, style.font_heading:get_height(), c.lamp_gold)
 
   text_y = text_y + style.font_heading:get_height() + math.floor(8 * s)
-  local sub_str = "A lightweight, cross-platform Lua & SDL2 starter template"
+  local sub_str = "A lightweight, cross-platform Lua & SDL3 starter template"
   ui.draw_centered_text(style.font_normal, sub_str, card_x, text_y, card_w, style.font_normal:get_height(), c.text_secondary)
 
   -- 8. Technology Pills / Badges
   text_y = text_y + style.font_normal:get_height() + math.floor(18 * s)
-  local badges = { "Lua 5.4", "SDL2 Platform", "Tabler Icons", "60 FPS Compositor" }
+  local badges = { "Lua 5.4", "SDL3 Platform", "Tabler Icons", "60 FPS Compositor" }
   local total_badge_w = 0
   local badge_widths = {}
   for i, b in ipairs(badges) do

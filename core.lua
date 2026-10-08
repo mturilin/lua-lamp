@@ -1,5 +1,5 @@
--- Lua Lamp Main Engine Core & SDL2 Application Lifecycle
--- High-performance, lightweight template for Lua + SDL2 desktop applications.
+-- Lua Lamp Main Engine Core & SDL3 Application Lifecycle
+-- High-performance, lightweight template for Lua + SDL3 desktop applications.
 
 local style = require "src.style"
 local canvas = require "src.canvas"
@@ -54,7 +54,7 @@ function core.init()
   -- Determine High-DPI Scaling Factor
   SCALE = tonumber(os.getenv("LUALAMP_SCALE") or os.getenv("LITE_SCALE")) or 1
 
-  -- Configure Initial SDL2 Window Dimensions & Title
+  -- Configure Initial SDL3 Window Dimensions & Title
   local _, _, cur_x, cur_y = system.get_window_size()
   local default_w = math.floor(960 * SCALE)
   local default_h = math.floor(640 * SCALE)
@@ -154,7 +154,7 @@ function core.run()
     local dt = math.min(0.1, math.max(0.001, now - last_time))
     last_time = now
 
-    -- 1. Poll & Dispatch SDL2 System Events
+    -- 1. Poll & Dispatch SDL3 System Events
     for type, a, b, c, d in system.poll_event do
       core.on_event(type, a, b, c, d)
     end
