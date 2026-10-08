@@ -138,7 +138,7 @@ local function safe_load_icon_font(pt_size)
 end
 
 function style.init_fonts(scale)
-  style.scale = scale or tonumber(os.getenv("LUALAMP_SCALE") or os.getenv("LITE_SCALE")) or 1
+  style.scale = scale or rawget(_G, "SCALE") or tonumber(os.getenv("LUALAMP_SCALE") or os.getenv("LITE_SCALE")) or 1
 
   -- Primary UI fonts
   style.font_hero       = safe_load_font("PublicSans-Bold.ttf", 38)

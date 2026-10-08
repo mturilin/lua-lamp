@@ -133,6 +133,25 @@ panel:draw()
 renderer.end_frame()
 print("[PASS] UI Layer (Object, View, Node, RootView, Widgets) verified.")
 
+-- 10. Test High-DPI Display Scale Detection & Dynamic Rescaling
+local detected_scale = core.get_default_scale()
+assert(detected_scale ~= nil and detected_scale > 0, "Default scale should be greater than 0")
+assert(SCALE == detected_scale, "Global SCALE should match automatically detected scale")
+print(string.format("[PASS] Automatic display scale detected: %.2fx", detected_scale))
+
+-- Test dynamic scale change event
+local prev_scale = SCALE
+core.on_event("scalechanged", 3.0)
+assert(SCALE == 3.0, "Scale changed event should update global SCALE")
+assert(style.scale == 3.0, "Scale changed event should update style.scale")
+local large_hero_w = style.font_hero:get_width("Hello, World!")
+assert(large_hero_w > 0, "Hero font should be reloaded with 3x scale")
+
+-- Restore detected scale
+core.on_event("scalechanged", prev_scale)
+assert(SCALE == prev_scale, "Scale should be successfully restored")
+print("[PASS] Dynamic display scale change event (scalechanged) verified.")
+
 print("\n========================================")
 print("ALL LUA LAMP VERIFICATION TESTS PASSED!")
 print("========================================")

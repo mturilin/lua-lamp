@@ -11,6 +11,7 @@ style.tab_width = common.round(170 * SCALE)
 local function resolve_font_path(filename, fallbacks)
   local candidate_dirs = {
     DATADIR .. "/fonts",
+    DATADIR .. "/../fonts",
     USERDIR .. "/fonts",
     (rawget(_G, "MACOS_RESOURCES") and (rawget(_G, "MACOS_RESOURCES") .. "/fonts")),
     "fonts"

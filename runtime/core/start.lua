@@ -3,8 +3,9 @@ VERSION = "1.0.0"
 MOD_VERSION = "1"
 
 SCALE = tonumber(os.getenv("LUALAMP_SCALE") or os.getenv("LITE_SCALE") or os.getenv("GDK_SCALE") or os.getenv("QT_SCALE_FACTOR"))
-     or (MACOS_SCALE and MACOS_SCALE > 0 and MACOS_SCALE)
      or (system.get_window_scale and system.get_window_scale())
+     or (system.get_display_scale and system.get_display_scale())
+     or (MACOS_SCALE and MACOS_SCALE > 0 and MACOS_SCALE)
      or 1
 PATHSEP = package.config:sub(1, 1)
 

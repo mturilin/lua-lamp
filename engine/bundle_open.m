@@ -6,7 +6,20 @@ double get_macos_backing_scale_factor(void) {
   @autoreleasepool {
     NSScreen *screen = [NSScreen mainScreen];
     if (screen) {
-      return (double)[screen backingScaleFactor];
+      double factor = (double)[screen backingScaleFactor];
+      if (factor > 1.0) {
+        return factor;
+      }
+    }
+    NSArray<NSScreen *> *screens = [NSScreen screens];
+    if (screens && [screens count] > 0) {
+      for (NSScreen *s in screens) {
+        double f = (double)[s backingScaleFactor];
+        if (f > 1.0) {
+          return f;
+        }
+      }
+      return (double)[screens[0] backingScaleFactor];
     }
     return 1.0;
   }

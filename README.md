@@ -38,6 +38,10 @@ A modern, high-performance, cross-platform desktop application starter kit built
   - Live window telemetry: dynamic canvas dimensions, live mouse coordinates, and FPS counter.
   - Interactive click ripple waves expanding outward from cursor clicks.
   - Built-in theme switcher (Dark Mode & Light Mode).
+- **Automatic 4K & High-DPI Monitor Scaling (Zero Input Required)**:
+  - System automatically detects the content scaling factor directly from SDL3 / OS window APIs (`system.get_window_scale()`, macOS AppKit `backingScaleFactor`).
+  - No manual inputs or prompts needed: typography, card dimensions, widgets, and paddings scale seamlessly on 4K, 5K, Retina, and fractional DPI displays.
+  - Dynamically rescales (`scalechanged`) at 60 FPS when dragging between monitors with different DPIs.
 - **100% Independent Native Engine (Zero Lite XL Dependency)**:
   - Vendors its own native C/SDL3 host engine in `engine/` linking FreeType2, PCRE2, and system frameworks.
   - Compiles directly with `clang` via `scripts/build_engine.sh`.

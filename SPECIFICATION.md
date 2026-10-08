@@ -58,12 +58,21 @@ It serves dual purposes:
 - Power-saving frame pacing uses `system.wait_event(sleep_time)`.
 
 ### Invariant 5: High-DPI & Scaling Contract
-- The global multiplier `SCALE` is resolved during initialization via `LUALAMP_SCALE` or `LITE_SCALE`.
-- All font sizes, margins, padding, and UI bounding boxes must scale proportionally with `SCALE`.
+- **Automatic System DPI Detection (Zero Input Requirement)**:
+  - On launch, the system automatically detects the display scale factor of the current monitor from the OS/display compositor using native SDL3 APIs (`system.get_window_scale()`, `system.get_display_scale()`, and macOS AppKit `[NSScreen backingScaleFactor]`).
+  - No manual inputs or prompts: the user is never asked for aspect ratios or screen resolutions.
+  - Automatic detection properly scales typography and UI widgets on 4K / High-DPI displays (e.g. 2.0x, 1.5x, 1.75x, 3.0x).
+- **Environment Variable Overrides**:
+  - Optional explicit overrides via `LUALAMP_SCALE`, `LITE_SCALE`, `GDK_SCALE`, or `QT_SCALE_FACTOR` take precedence if defined.
+- **Dynamic Multi-Monitor Rescaling (`scalechanged`)**:
+  - When a window is dragged between displays with differing scale factors (e.g. from a standard 1080p display to a 4K display) or display scaling settings change, the native host generates `"scalechanged"` events (`SDL_EVENT_WINDOW_DISPLAY_CHANGED` and `SDL_EVENT_WINDOW_DISPLAY_SCALE_CHANGED`).
+  - `core.rescale()` dynamically reloads typography, updates `style.scale`, and refits view bounds at 60 FPS without restarting.
+- **Proportional Geometry Contract**:
+  - All font sizes, margins, padding, and UI bounding boxes must scale proportionally with `SCALE`.
 
 ### Invariant 6: Automated Verification Contract
-- Every distribution must pass the automated headless test suite (`bin/lualamp --test` or `tests/test_lualamp.lua`) with zero assertion failures.
-- Headless execution tests engine boot, font loading, theme toggling, canvas animation state, vector drawing, event dispatching, and UI framework widget initialization (`Object`, `View`, `Node`, `RootView`, `Widget`, `Button`, `Label`, `Toggle`, `TextBox`, `Dialog`).
+- Every distribution must pass the automated headless test suite (`bin/lualamp --test` or `tests/test_lualamp.lua`) across all 10 stages with zero assertion failures.
+- Headless execution tests engine boot, font loading, theme toggling, canvas animation state, vector drawing, event dispatching, UI framework widget initialization (`Object`, `View`, `Node`, `RootView`, `Widget`, `Button`, `Label`, `Toggle`, `TextBox`, `Dialog`), automatic display scale detection, and dynamic `scalechanged` rescaling.
 
 ### Invariant 7: Optical Baseline & UI Alignment Invariant
 - Text, labels, and badges must never be vertically aligned by naive line-height division alone (`math.floor((h - font:get_height()) / 2)`), which produces an optical upward drift of 1–2px due to Latin font descender reservations.
@@ -144,11 +153,13 @@ lua-lamp/
 - Zero external runtime dependency.
 
 ### 4.2 Application Engine Core (`core.lua`)
+- **`core.get_default_scale()`**: Automatically determines display scaling factor from `system.get_window_scale()`, `system.get_display_scale()`, macOS AppKit `backingScaleFactor`, framebuffer ratio, or environment variable overrides.
+- **`core.rescale(new_scale)`**: Dynamically rescales font sizes, layout metrics, and widget tree when display scale changes (`scalechanged`).
 - **`core.init()`**: Configures window size, High-DPI scaling factor, initializes fonts, instantiates `core.root_view` (`RootView`), and sets up the canvas.
 - **`core.root_view`**: Top-level container managing split nodes, floating overlays, dialogs, and event routing.
 - **`core.push_clip_rect` / `core.pop_clip_rect`**: Nested hierarchical clipping stack.
 - **`core.request_cursor(cursor)`**: Dynamic cursor style requests (`arrow`, `ibeam`, `hand`, `sizeh`, `sizev`).
-- **`core.on_event(type, a, b, c, d)`**: Routes SDL3 events to `core.root_view` (mouse, keyboard, text input, wheel) and canvas handlers.
+- **`core.on_event(type, a, b, c, d)`**: Routes SDL3 events to `core.root_view` (mouse, keyboard, text input, wheel, scalechanged) and canvas handlers.
 - **`core.step_threads()`**: Manages coroutine wake times and asynchronous workers.
 - **`core.draw()`**: Composites base canvas and all active views/widgets in `core.root_view`.
 - **`core.run()`**: 60 FPS event loop with delta-time calculation and power-saving frame sleep.

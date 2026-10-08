@@ -201,12 +201,30 @@ top:
         return 3;
       }
 
+    case SDL_EVENT_WINDOW_DISPLAY_CHANGED:
     case SDL_EVENT_WINDOW_DISPLAY_SCALE_CHANGED:
       {
         ren_resize_window(&window_renderer);
         rencache_invalidate();
         lua_pushstring(L, "scalechanged");
-        float ds = SDL_GetWindowDisplayScale(window_renderer.window);
+        float ds = 0.0f;
+        if (window_renderer.window) {
+          ds = SDL_GetWindowDisplayScale(window_renderer.window);
+          if (ds <= 0.0f) {
+            SDL_DisplayID disp = SDL_GetDisplayForWindow(window_renderer.window);
+            if (disp) {
+              ds = SDL_GetDisplayContentScale(disp);
+            }
+          }
+        }
+#ifdef __APPLE__
+        if (ds <= 1.0f) {
+          double mac_scale = get_macos_backing_scale_factor();
+          if (mac_scale > ds) {
+            ds = (float) mac_scale;
+          }
+        }
+#endif
         lua_pushnumber(L, ds > 0.0f ? ds : 1.0f);
         return 2;
       }
@@ -519,15 +537,61 @@ static int f_set_window_size(lua_State *L) {
 
 
 static int f_get_window_scale(lua_State *L) {
-  float scale = SDL_GetWindowDisplayScale(window_renderer.window);
-#ifdef __APPLE__
+  float scale = 0.0f;
+  if (window_renderer.window) {
+    scale = SDL_GetWindowDisplayScale(window_renderer.window);
+    if (scale <= 0.0f) {
+      SDL_DisplayID disp = SDL_GetDisplayForWindow(window_renderer.window);
+      if (disp) {
+        scale = SDL_GetDisplayContentScale(disp);
+      }
+    }
+  }
   if (scale <= 0.0f) {
-    scale = (float) get_macos_backing_scale_factor();
+    SDL_DisplayID primary = SDL_GetPrimaryDisplay();
+    if (primary) {
+      scale = SDL_GetDisplayContentScale(primary);
+    }
+  }
+#ifdef __APPLE__
+  if (scale <= 1.0f) {
+    double mac_scale = get_macos_backing_scale_factor();
+    if (mac_scale > scale) {
+      scale = (float) mac_scale;
+    }
   }
 #endif
   if (scale <= 0.0f) {
     scale = 1.0f;
   }
+  lua_pushnumber(L, scale);
+  return 1;
+}
+
+
+static int f_get_display_scale(lua_State *L) {
+  float scale = 0.0f;
+  SDL_DisplayID disp = 0;
+  if (window_renderer.window) {
+    disp = SDL_GetDisplayForWindow(window_renderer.window);
+  }
+  if (!disp) {
+    disp = SDL_GetPrimaryDisplay();
+  }
+  if (disp) {
+    scale = SDL_GetDisplayContentScale(disp);
+  }
+  if (scale <= 0.0f) {
+    return f_get_window_scale(L);
+  }
+#ifdef __APPLE__
+  if (scale <= 1.0f) {
+    double mac_scale = get_macos_backing_scale_factor();
+    if (mac_scale > scale) {
+      scale = (float) mac_scale;
+    }
+  }
+#endif
   lua_pushnumber(L, scale);
   return 1;
 }
@@ -1115,6 +1179,7 @@ static const luaL_Reg lib[] = {
   { "set_window_hit_test", f_set_window_hit_test },
   { "get_window_size",     f_get_window_size     },
   { "get_window_scale",    f_get_window_scale    },
+  { "get_display_scale",   f_get_display_scale   },
   { "set_window_size",     f_set_window_size     },
   { "set_text_input_rect", f_set_text_input_rect },
   { "clear_ime",           f_clear_ime           },

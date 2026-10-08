@@ -84,25 +84,105 @@ function core.set_active_view(view)
 end
 
 --------------------------------------------------------------------------------
--- 3. Engine Initialization
+-- 3. High-DPI Display Scaling & Rescaling Engine
+--------------------------------------------------------------------------------
+
+--- Automatically detect display scale factor from system, SDL3, or environment
+function core.get_default_scale()
+  -- 1. Explicit user override from environment variables takes precedence
+  local env_scale = tonumber(os.getenv("LUALAMP_SCALE") or os.getenv("LITE_SCALE") or os.getenv("GDK_SCALE") or os.getenv("QT_SCALE_FACTOR"))
+  if env_scale and env_scale > 0 then
+    return env_scale
+  end
+
+  -- 2. Query native SDL3 window/display scale API
+  if system.get_window_scale then
+    local s = system.get_window_scale()
+    if s and s > 0 then
+      return s
+    end
+  end
+
+  -- 3. Query native display scale API if available
+  if system.get_display_scale then
+    local ds = system.get_display_scale()
+    if ds and ds > 0 then
+      return ds
+    end
+  end
+
+  -- 4. Check macOS backing scale factor global if defined
+  if rawget(_G, "MACOS_SCALE") and MACOS_SCALE > 0 then
+    return MACOS_SCALE
+  end
+
+  -- 5. Calculate ratio of framebuffer pixel size to logical window points
+  if renderer and renderer.get_size and system.get_window_size then
+    local rw, rh = renderer.get_size()
+    local ww, wh = system.get_window_size()
+    if ww > 0 and rw > 0 then
+      local ratio = rw / ww
+      if ratio > 0.5 then
+        return ratio
+      end
+    end
+  end
+
+  -- 6. Fallback standard 1x scale
+  return 1
+end
+
+--- Dynamically rescale UI typography, widgets, and layout when display DPI changes
+function core.rescale(new_scale)
+  new_scale = tonumber(new_scale) or core.get_default_scale()
+  if not new_scale or new_scale <= 0 then return end
+  if new_scale == SCALE and core.rescaled then return end
+
+  SCALE = new_scale
+  core.rescaled = true
+
+  -- Reinitialize fonts and style metrics for the new scale factor
+  style.init_fonts(SCALE)
+
+  -- Synchronize Lite XL runtime style if present
+  local ok, rt_style = pcall(require, "core.style")
+  if ok and rt_style then
+    rt_style.scale = SCALE
+  end
+
+  -- Resize UI view hierarchy
+  if core.root_view then
+    local rw, rh = renderer.get_size()
+    core.root_view.size.x = rw
+    core.root_view.size.y = rh
+    if core.root_view.update then
+      core.root_view:update()
+    end
+  end
+
+  core.redraw = true
+end
+
+--------------------------------------------------------------------------------
+-- 4. Engine Initialization
 --------------------------------------------------------------------------------
 
 function core.init()
   if core.initialized then return end
   core.initialized = true
 
-  -- Determine High-DPI Scaling Factor
-  SCALE = tonumber(os.getenv("LUALAMP_SCALE") or os.getenv("LITE_SCALE")) or 1
+  -- Determine High-DPI Scaling Factor automatically from system/display
+  SCALE = core.get_default_scale()
 
   -- Configure Initial SDL3 Window Dimensions & Title
   local _, _, cur_x, cur_y = system.get_window_size()
-  local default_w = math.floor(960 * SCALE)
-  local default_h = math.floor(640 * SCALE)
+  local default_w = 960
+  local default_h = 640
   system.set_window_size(default_w, default_h, cur_x or 80, cur_y or 80)
   system.set_window_title("Lua Lamp — Hello World")
   if system.raise_window then system.raise_window() end
 
-  -- Initialize Style, Theme & Typography
+  -- Initialize Style, Theme & Typography with detected scale
   style.init_fonts(SCALE)
 
   -- Initialize Canvas Component
@@ -123,7 +203,7 @@ function core.init()
 end
 
 --------------------------------------------------------------------------------
--- 4. System Event Dispatcher
+-- 5. System Event Dispatcher
 --------------------------------------------------------------------------------
 
 function core.on_event(type, a, b, c, d)
@@ -132,6 +212,9 @@ function core.on_event(type, a, b, c, d)
     return
   elseif type == "resized" or type == "exposed" then
     core.redraw = true
+    return
+  elseif type == "scalechanged" then
+    core.rescale(a)
     return
   end
 
@@ -195,7 +278,7 @@ function core.on_event(type, a, b, c, d)
 end
 
 --------------------------------------------------------------------------------
--- 5. Frame Rendering Compositor
+-- 6. Frame Rendering Compositor
 --------------------------------------------------------------------------------
 
 function core.draw()
@@ -218,7 +301,7 @@ function core.draw()
 end
 
 --------------------------------------------------------------------------------
--- 6. Main 60 FPS Event Loop
+-- 7. Main 60 FPS Event Loop
 --------------------------------------------------------------------------------
 
 function core.run()
@@ -272,7 +355,7 @@ function core.run()
 end
 
 --------------------------------------------------------------------------------
--- 7. Graceful Error Handling
+-- 8. Graceful Error Handling
 --------------------------------------------------------------------------------
 
 function core.on_error(err)
