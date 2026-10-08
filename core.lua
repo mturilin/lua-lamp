@@ -105,15 +105,19 @@ function core.init()
   -- Initialize Style, Theme & Typography
   style.init_fonts(SCALE)
 
-  -- Initialize UI View Hierarchy (RootView)
+  -- Initialize Canvas Component
+  canvas.init()
+
+  -- Initialize UI View Hierarchy (RootView) with CanvasView as primary view
   local ok, RootView = pcall(require, "core.rootview")
   if ok and RootView then
     core.root_view = RootView()
-    core.active_view = core.root_view.root_node.active_view
+    local CanvasView = require "src.canvas_view"
+    core.canvas_view = CanvasView()
+    core.root_view.root_node.views = { core.canvas_view }
+    core.root_view.root_node.active_view = core.canvas_view
+    core.active_view = core.canvas_view
   end
-
-  -- Initialize Canvas Component
-  canvas.init()
 
   core.redraw = true
 end
@@ -140,31 +144,31 @@ function core.on_event(type, a, b, c, d)
       local dy = b - (core.last_mouse_y or b)
       core.last_mouse_x, core.last_mouse_y = a, b
       core.root_view:on_mouse_moved(a, b, dx, dy)
+      core.redraw = true
     elseif type == "mousepressed" then
       core.root_view:on_mouse_pressed(a, b, c, d or 1)
+      core.redraw = true
     elseif type == "mousereleased" then
       core.root_view:on_mouse_released(a, b, c)
+      core.redraw = true
     elseif type == "mousewheel" then
       core.root_view:on_mouse_wheel(b, a)
+      core.redraw = true
     elseif type == "textinput" then
       core.root_view:on_text_input(a)
+      core.redraw = true
     end
-  end
-
-  -- Mouse movement for canvas
-  if type == "mousemoved" then
-    local px, py = a, b
-    canvas.on_mouse_moved(px, py)
-    core.redraw = true
-    return
-  end
-
-  -- Mouse button pressed for canvas
-  if type == "mousepressed" then
-    local button, px, py = a, b, c
-    canvas.on_mouse_pressed(button, px, py, core)
-    core.redraw = true
-    return
+  else
+    -- Fallback canvas event handlers when running without RootView
+    if type == "mousemoved" then
+      canvas.on_mouse_moved(a, b)
+      core.redraw = true
+      return
+    elseif type == "mousepressed" then
+      canvas.on_mouse_pressed(a, b, c, core)
+      core.redraw = true
+      return
+    end
   end
 
   -- Keyboard shortcuts
@@ -199,10 +203,7 @@ function core.draw()
   core.clip_rect_stack[1] = { 0, 0, win_w, win_h }
   renderer.set_clip_rect(0, 0, win_w, win_h)
 
-  -- Render base canvas stage
-  canvas.draw(win_w, win_h)
-
-  -- Render RootView UI layer & widgets
+  -- Render RootView UI layer & widgets (with CanvasView as root node)
   if core.root_view then
     core.root_view.size.x, core.root_view.size.y = win_w, win_h
     core.root_view:update()
@@ -211,6 +212,8 @@ function core.draw()
       system.set_cursor(core.cursor_change_req)
       core.cursor_change_req = nil
     end
+  else
+    canvas.draw(win_w, win_h)
   end
 end
 

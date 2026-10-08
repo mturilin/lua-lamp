@@ -1,6 +1,6 @@
--- this file is used by lite-xl to setup the Lua environment when starting
-VERSION = "2.1.8"
-MOD_VERSION = "3"
+-- Lua Lamp runtime environment setup
+VERSION = "1.0.0"
+MOD_VERSION = "1"
 
 SCALE = tonumber(os.getenv("LUALAMP_SCALE") or os.getenv("LITE_SCALE") or os.getenv("GDK_SCALE") or os.getenv("QT_SCALE_FACTOR"))
      or (MACOS_SCALE and MACOS_SCALE > 0 and MACOS_SCALE)
