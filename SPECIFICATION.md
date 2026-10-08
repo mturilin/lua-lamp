@@ -21,7 +21,8 @@ It serves dual purposes:
 ### Invariant 1: Blank Canvas Centering
 - On launch, the window displays a centered "Hello, World!" stage card against a clean canvas.
 - The stage card remains centered dynamically regardless of window resizing or High-DPI display scaling.
-- The canvas illustrates live interactive feedback: mouse coordinates `(x, y)`, window dimensions `w x h`, frame rate, and animated click ripples.
+- The canvas illustrates live interactive feedback: current display scale ratio (e.g. `Scale: 2x (200%)`), mouse coordinates `(x, y)`, window dimensions `w x h`, frame rate, and animated click ripples.
+- The display scale ratio is also dynamically surfaced in the stage card's technology pill badges and native window title bar (`Lua Lamp — Hello World (<scale> Scale)`).
 
 ### Invariant 2: Zero External Binary Dependency & MIT UI Framework Integration
 - **Zero Binary Dependency**: Lua Lamp **DOES NOT** depend on Lite XL binaries, CLI tools, or external installations. The native C host engine (`engine/`) compiles independently from source, statically embedding Lua 5.4.7 and bundling `libSDL3.0.dylib`.

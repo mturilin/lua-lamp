@@ -166,7 +166,8 @@ function canvas.draw(win_w, win_h)
 
   -- 8. Technology Pills / Badges
   text_y = text_y + style.font_normal:get_height() + math.floor(18 * s)
-  local badges = { "Lua 5.4", "SDL3 Platform", "Tabler Icons", "60 FPS Compositor" }
+  local scale_badge = (s == math.floor(s)) and string.format("Scale: %dx", math.floor(s)) or string.format("Scale: %.1fx", s)
+  local badges = { "Lua 5.4", "SDL3 Platform", scale_badge, "Tabler Icons", "60 FPS" }
   local total_badge_w = 0
   local badge_widths = {}
   for i, b in ipairs(badges) do
@@ -218,12 +219,23 @@ function canvas.draw(win_w, win_h)
   local uptime = math.max(0, math.floor(system.get_time() - canvas.start_time))
   local min = math.floor(uptime / 60)
   local sec = uptime % 60
-  local stat_left = string.format("Canvas: %dx%d  |  Mouse: (%d, %d)", win_w, win_h, canvas.mouse_x, canvas.mouse_y)
+  local scale_pct = math.floor(s * 100 + 0.5)
+  local scale_short = (s == math.floor(s)) and string.format("%dx", math.floor(s)) or string.format("%.1fx", s)
+  local scale_full = string.format("%s (%d%%)", scale_short, scale_pct)
+
+  local stat_left = string.format("Canvas: %dx%d  |  Scale: %s  |  Mouse: (%d, %d)", win_w, win_h, scale_full, canvas.mouse_x, canvas.mouse_y)
   local stat_right = string.format("FPS: 60  |  Uptime: %02d:%02d", min, sec)
 
-  renderer.draw_text(style.font_small, stat_left, card_x + 14 * s, footer_y + 8 * s, c.text_tertiary)
+  local lw = style.font_small:get_width(stat_left)
   local rw = style.font_small:get_width(stat_right)
-  renderer.draw_text(style.font_small, stat_right, card_x + card_w - rw - 14 * s, footer_y + 8 * s, c.text_tertiary)
+  if lw + rw + 36 * s > card_w then
+    stat_left = string.format("Canvas: %dx%d  |  Scale: %s", win_w, win_h, scale_short)
+  end
+
+  local optical_footer_shift = math.floor(1.2 * s)
+  local ty = footer_y + math.floor((footer_h - style.font_small:get_height()) / 2) + optical_footer_shift
+  renderer.draw_text(style.font_small, stat_left, card_x + 14 * s, ty, c.text_tertiary)
+  renderer.draw_text(style.font_small, stat_right, card_x + card_w - rw - 14 * s, ty, c.text_tertiary)
 
   -- 11. Bottom Help Hint Bar (Fixed at window bottom)
   local hint_y = win_h - math.floor(26 * s)

@@ -160,6 +160,11 @@ function core.rescale(new_scale)
     end
   end
 
+  local scale_label = (SCALE == math.floor(SCALE)) and string.format("%dx", math.floor(SCALE)) or string.format("%.1fx", SCALE)
+  if system.set_window_title then
+    system.set_window_title(string.format("Lua Lamp — Hello World (%s Scale)", scale_label))
+  end
+
   core.redraw = true
 end
 
@@ -179,7 +184,8 @@ function core.init()
   local default_w = 960
   local default_h = 640
   system.set_window_size(default_w, default_h, cur_x or 80, cur_y or 80)
-  system.set_window_title("Lua Lamp — Hello World")
+  local scale_label = (SCALE == math.floor(SCALE)) and string.format("%dx", math.floor(SCALE)) or string.format("%.1fx", SCALE)
+  system.set_window_title(string.format("Lua Lamp — Hello World (%s Scale)", scale_label))
   if system.raise_window then system.raise_window() end
 
   -- Initialize Style, Theme & Typography with detected scale

@@ -16,12 +16,12 @@ A modern, high-performance, cross-platform desktop application starter kit built
 |                    |             Welcome to Lua Lamp               |                    |
 |                    |  A lightweight Lua & SDL3 starter template    |                    |
 |                    |                                               |                    |
-|                    | [Lua 5.4] [SDL3 Platform] [60 FPS Compositor] |                    |
+|                    |   [Lua 5.4] [SDL3] [Scale: 2x] [60 FPS]       |                    |
 |                    |                                               |                    |
 |                    |   [ ☀ Light Theme ]     [ Turn Lamp Off ]     |                    |
 |                    |                                               |                    |
 |                    +-----------------------------------------------+                    |
-|                    | Canvas: 960x640 | Mouse: (480, 320) | FPS: 60 |                    |
+|                    | Canvas: 1920x1280 | Scale: 2x | FPS: 60       |                    |
 |                    +-----------------------------------------------+                    |
 |                                                                                         |
 |       Press <Space> to toggle lamp glow  •  <T> to switch theme  •  <Q> to quit         |
@@ -35,11 +35,12 @@ A modern, high-performance, cross-platform desktop application starter kit built
 - **Blank Canvas with "Hello World"**:
   - Clean, responsive canvas card centered dynamically regardless of window resizing or DPI scaling.
   - Interactive glowing lamp with pulsating warm amber filament and volumetric light aura.
-  - Live window telemetry: dynamic canvas dimensions, live mouse coordinates, and FPS counter.
+  - Live window telemetry: dynamic canvas dimensions, display scale ratio (`Scale: 2x (200%)`), live mouse coordinates, and FPS counter.
   - Interactive click ripple waves expanding outward from cursor clicks.
   - Built-in theme switcher (Dark Mode & Light Mode).
 - **Automatic 4K & High-DPI Monitor Scaling (Zero Input Required)**:
   - System automatically detects the content scaling factor directly from SDL3 / OS window APIs (`system.get_window_scale()`, macOS AppKit `backingScaleFactor`).
+  - Real-time scale ratio is displayed in the window's live status bar, badge row, and window title bar.
   - No manual inputs or prompts needed: typography, card dimensions, widgets, and paddings scale seamlessly on 4K, 5K, Retina, and fractional DPI displays.
   - Dynamically rescales (`scalechanged`) at 60 FPS when dragging between monitors with different DPIs.
 - **100% Independent Native Engine (Zero Lite XL Dependency)**:
