@@ -3,6 +3,8 @@
 
 local style = require "src.style"
 local canvas = require "src.canvas"
+local menu = require "src.menu"
+local settings = require "src.settings_dialog"
 
 local core = {
   initialized = false,
@@ -11,6 +13,12 @@ local core = {
   threads = {},
   canvas = canvas,
   style = style,
+  menu = menu,
+  settings = settings,
+  mod_ctrl = false,
+  mod_cmd = false,
+  mod_shift = false,
+  mod_alt = false,
   clip_rect_stack = { { 0, 0, 0, 0 } },
   root_view = nil,
   active_view = nil,
@@ -194,6 +202,9 @@ function core.init()
   -- Initialize Canvas Component
   canvas.init()
 
+  -- Initialize Unified Menu System (Native NSMenu on macOS, In-Window bar on Linux)
+  menu.init_defaults()
+
   -- Initialize UI View Hierarchy (RootView) with CanvasView as primary view
   local ok, RootView = pcall(require, "core.rootview")
   if ok and RootView then
@@ -222,11 +233,76 @@ function core.on_event(type, a, b, c, d)
   elseif type == "scalechanged" then
     core.rescale(a)
     return
+  elseif type == "menu" then
+    menu:trigger(a)
+    core.redraw = true
+    return
   end
 
-  local win_w, win_h = renderer.get_size()
+  -- Track keyboard modifier keys
+  if type == "keypressed" then
+    local kl = a:lower()
+    if kl == "left ctrl" or kl == "right ctrl" or kl == "ctrl" then core.mod_ctrl = true end
+    if kl == "left cmd" or kl == "right cmd" or kl == "cmd" or kl == "left gui" or kl == "right gui" or kl == "gui" then core.mod_cmd = true end
+    if kl == "left shift" or kl == "right shift" or kl == "shift" then core.mod_shift = true end
+    if kl == "left alt" or kl == "right alt" or kl == "alt" then core.mod_alt = true end
+  elseif type == "keyreleased" then
+    local kl = a:lower()
+    if kl == "left ctrl" or kl == "right ctrl" or kl == "ctrl" then core.mod_ctrl = false end
+    if kl == "left cmd" or kl == "right cmd" or kl == "cmd" or kl == "left gui" or kl == "right gui" or kl == "gui" then core.mod_cmd = false end
+    if kl == "left shift" or kl == "right shift" or kl == "shift" then core.mod_shift = false end
+    if kl == "left alt" or kl == "right alt" or kl == "alt" then core.mod_alt = false end
+  end
 
-  -- Forward event to RootView UI tree if present
+  -- 1. Intercept events when Modal Settings Dialog is active
+  if settings.visible then
+    if type == "mousemoved" then
+      if settings:on_mouse_moved(a, b) then
+        core.redraw = true
+        return
+      end
+    elseif type == "mousepressed" then
+      if settings:on_mouse_pressed(a, b, c) then
+        core.redraw = true
+        return
+      end
+    elseif type == "mousereleased" then
+      if settings:on_mouse_released(a, b, c) then
+        core.redraw = true
+        return
+      end
+    elseif type == "keypressed" then
+      local key = a:lower()
+      if key == "escape" then
+        settings:hide()
+        core.redraw = true
+        return
+      elseif (key == "," or key == "<") and (core.mod_cmd or core.mod_ctrl) then
+        settings:toggle()
+        core.redraw = true
+        return
+      end
+      return
+    end
+    return
+  end
+
+  -- 2. Intercept events for In-Window Menu Bar on Linux/Windows
+  if PLATFORM ~= "Mac OS X" then
+    if type == "mousemoved" then
+      if menu:on_mouse_moved(a, b) then
+        core.redraw = true
+        return
+      end
+    elseif type == "mousepressed" then
+      if menu:on_mouse_pressed(a, b, c) then
+        core.redraw = true
+        return
+      end
+    end
+  end
+
+  -- 3. Forward event to RootView UI tree if present
   if core.root_view then
     if type == "mousemoved" then
       local dx = a - (core.last_mouse_x or a)
@@ -260,26 +336,45 @@ function core.on_event(type, a, b, c, d)
     end
   end
 
-  -- Keyboard shortcuts
+  -- 4. Keyboard shortcuts
   if type == "keypressed" then
     local key = a:lower()
 
-    if key == "q" or key == "escape" then
+    -- Settings dialog toggle (Cmd+, on macOS, Ctrl+, on Linux/Win)
+    if (key == "," or key == "<") and (core.mod_cmd or core.mod_ctrl) then
+      menu:trigger("app:open-settings")
+      return
+    end
+
+    if key == "escape" then
+      if menu:is_open() then
+        menu:close()
+        core.redraw = true
+        return
+      end
       core.quit_requested = true
+      return
+    elseif key == "q" then
+      if core.mod_cmd or core.mod_ctrl or not core.root_view then
+        core.quit_requested = true
+        return
+      end
     elseif key == "space" then
       canvas.toggle_lamp()
       core.redraw = true
+      return
     elseif key == "t" then
       style.toggle_theme()
       core.redraw = true
+      return
     elseif key == "f11" then
       local cur_mode = system.get_window_mode and system.get_window_mode() or "normal"
       if system.set_window_mode then
         system.set_window_mode(cur_mode == "fullscreen" and "normal" or "fullscreen")
         core.redraw = true
       end
+      return
     end
-    return
   end
 end
 
@@ -292,7 +387,7 @@ function core.draw()
   core.clip_rect_stack[1] = { 0, 0, win_w, win_h }
   renderer.set_clip_rect(0, 0, win_w, win_h)
 
-  -- Render RootView UI layer & widgets (with CanvasView as root node)
+  -- 1. Render RootView UI layer & widgets (with CanvasView as root node)
   if core.root_view then
     core.root_view.size.x, core.root_view.size.y = win_w, win_h
     core.root_view:update()
@@ -303,6 +398,16 @@ function core.draw()
     end
   else
     canvas.draw(win_w, win_h)
+  end
+
+  -- 2. Draw In-Window Menu Bar on Linux/Windows
+  if PLATFORM ~= "Mac OS X" then
+    menu:draw(win_w, win_h)
+  end
+
+  -- 3. Draw Floating Modal Settings Window on top of canvas/widgets
+  if settings.visible then
+    settings:draw(win_w, win_h)
   end
 end
 

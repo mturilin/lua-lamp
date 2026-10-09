@@ -239,7 +239,8 @@ function canvas.draw(win_w, win_h)
 
   -- 11. Bottom Help Hint Bar (Fixed at window bottom)
   local hint_y = win_h - math.floor(26 * s)
-  local hint_text = "Press <Space> to toggle lamp glow  •  <T> to switch theme  •  <Click> to spawn ripple  •  <Q> to quit"
+  local mod = (PLATFORM == "Mac OS X") and "Cmd" or "Ctrl"
+  local hint_text = string.format("Press <%s+,> for Settings  •  <Space> to toggle lamp  •  <T> to switch theme  •  <Q> to quit", mod)
   ui.draw_centered_text(style.font_small, hint_text, 0, hint_y, win_w, style.font_small:get_height(), c.text_tertiary)
 end
 

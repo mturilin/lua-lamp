@@ -72,8 +72,8 @@ It serves dual purposes:
   - All font sizes, margins, padding, and UI bounding boxes must scale proportionally with `SCALE`.
 
 ### Invariant 6: Automated Verification Contract
-- Every distribution must pass the automated headless test suite (`bin/lualamp --test` or `tests/test_lualamp.lua`) across all 10 stages with zero assertion failures.
-- Headless execution tests engine boot, font loading, theme toggling, canvas animation state, vector drawing, event dispatching, UI framework widget initialization (`Object`, `View`, `Node`, `RootView`, `Widget`, `Button`, `Label`, `Toggle`, `TextBox`, `Dialog`), automatic display scale detection, and dynamic `scalechanged` rescaling.
+- Every distribution must pass the automated headless test suite (`bin/lualamp --test` or `tests/test_lualamp.lua`) across all 11 stages with zero assertion failures.
+- Headless execution tests engine boot, font loading, theme toggling, canvas animation state, vector drawing, event dispatching, UI framework widget initialization (`Object`, `View`, `Node`, `RootView`, `Widget`, `Button`, `Label`, `Toggle`, `TextBox`, `Dialog`), automatic display scale detection, dynamic `scalechanged` rescaling, unified menu registration, command dispatching, and extensible settings modal dialog operations.
 
 ### Invariant 7: Optical Baseline & UI Alignment Invariant
 - Text, labels, and badges must never be vertically aligned by naive line-height division alone (`math.floor((h - font:get_height()) / 2)`), which produces an optical upward drift of 1–2px due to Latin font descender reservations.
@@ -81,6 +81,31 @@ It serves dual purposes:
 - Icons and labels must be measured independently with decoupled optical vertical centers.
 - Interactive controls must use borderless translucent fills (resting/hover/active) rather than high-contrast 1px wireframe outlines.
 - All rounded vector curves must compute fractional area coverage for anti-aliasing. See [`AGENTS.md`](file:///Users/mturilin/Dev/lua-lamp/AGENTS.md) for full protocol.
+
+### Invariant 8: Unified Cross-Platform Menu Architecture
+- **macOS Top-of-Screen System Menu**: On macOS, menus MUST be rendered in the native top-of-screen menu bar using AppKit `NSMenu` (`[NSApp mainMenu]`), matching Human Interface Guidelines.
+  - Native menus dispatch commands (`"app:open-settings"`, `"app:about"`, `"canvas:toggle-theme"`, `"app:quit"`) as `"menu"` SDL events into `core.on_event()`.
+  - Includes standard Application menu (*About Lua Lamp*, *Settings...* <kbd>Cmd+,</kbd>, *Services*, *Hide*, *Quit* <kbd>Cmd+Q</kbd>), *View* menu, and *Help* menu.
+- **Linux In-Window Menu Bar**: On non-macOS platforms (Linux, Windows), menus MUST be rendered as an in-window horizontal bar at the top of the canvas via `src/menubar.lua`.
+  - Dropdown lists support borderless translucent pills, hover states, subpixel rounded bounds, optical baseline compensation, and shortcut badges.
+- **Menu Registry & Extensibility**: All application scripts can dynamically register categories and menu items via `menu:register(category, items)` and bind actions via `menu:bind(command_id, handler)`.
+
+### Invariant 9: Extensible Modal Settings Dialog Contract
+- The Settings screen MUST be presented as a separate floating modal window (`src/settings_dialog.lua`), not an inline replacement of the canvas.
+- Dimensions: `math.floor(640 * SCALE)` width by `math.floor(430 * SCALE)` height, dynamically centered or draggable by the title bar.
+- Closes cleanly via <kbd>Esc</kbd>, close button `[✕]`, `[Close]` footer button, or clicking outside on the modal dimming backdrop.
+- **Core Settings Tabs**:
+  1. **Display & Scale**: Live scaling multiplier switcher (`Auto`, `1.0x`, `1.25x`, `1.5x`, `1.75x`, `2.0x`, `2.5x`) that executes `core.rescale()` immediately at 60 FPS without restarting, alongside hardware display telemetry.
+  2. **Typography**: Font family selector (`Public Sans`, `Source Sans 3`), size presets (`Compact`, `Standard`, `Large`), and live TrueType rendering preview box.
+  3. **Appearance**: Color scheme toggle (Dark Mode vs. Light Mode) and animated lamp filament toggle.
+- **Extensible Plugin Tabs**: Applications and plugins can extend the Settings dialog with custom tabs via `settings:register_section(id, title, icon, render_fn)`.
+
+### Invariant 10: Mini-Flutter Application Framework Facade Contract
+- Lua Lamp provides a standardized developer facade (`src/framework.lua`) exposing:
+  - First-class UI widgets: `Widget`, `Button`, `Label`, `Toggle`, `CheckBox`, `TextBox`, `NoteBook`, `SelectBox`, `ListBox`, `ScrollBar`, `ProgressBar`, `ColorPicker`, `MessageBox`, `Dialog`.
+  - Drawing & vector primitives: `UI` (anti-aliased rounded boxes, optical baseline text, circles, pill badges).
+  - Tabler icons registry: `Icons`.
+  - System services: `Menu`, `Settings`, `Canvas`, `Style`, `add_thread`, `rescale`, `get_scale`.
 
 ---
 
@@ -127,11 +152,15 @@ lua-lamp/
 │   └── generate_icon.swift     # Procedural macOS .icns and PNG generator
 ├── src/                        # Modular application code
 │   ├── canvas.lua              # Central "Hello World" canvas component
+│   ├── framework.lua           # Mini-Flutter developer application framework facade
 │   ├── icons.lua               # Tabler icon codepoints registry
+│   ├── menu.lua                # Unified menu registry & cross-platform dispatcher
+│   ├── menubar.lua             # In-window borderless menu bar (Linux/Windows)
+│   ├── settings_dialog.lua     # Extensible floating modal settings window
 │   ├── style.lua               # Theme management (dark/light) & font loader
 │   └── ui.lua                  # Reusable drawing primitives & UI components
 ├── tests/
-│   └── test_lualamp.lua        # Headless automated verification suite (Stages 1-9)
+│   └── test_lualamp.lua        # Headless automated verification suite (Stages 1-11)
 ├── Dockerfile                  # Containerized Linux build environment
 ├── LICENSE                     # MIT Open Source License
 ├── README.md                   # User documentation and guide
@@ -152,17 +181,18 @@ lua-lamp/
 - Statically embeds Lua 5.4.7 core interpreter.
 - Exposes native C modules: `system`, `renderer`, `process`, `regex`, `dirmonitor`.
 - Zero external runtime dependency.
+- macOS Host Bridge (`bundle_open.m`): Exposes native Cocoa `NSMenu` construction and dispatches menu action selections as `"menu"` SDL events.
 
 ### 4.2 Application Engine Core (`core.lua`)
 - **`core.get_default_scale()`**: Automatically determines display scaling factor from `system.get_window_scale()`, `system.get_display_scale()`, macOS AppKit `backingScaleFactor`, framebuffer ratio, or environment variable overrides.
-- **`core.rescale(new_scale)`**: Dynamically rescales font sizes, layout metrics, and widget tree when display scale changes (`scalechanged`).
-- **`core.init()`**: Configures window size, High-DPI scaling factor, initializes fonts, instantiates `core.root_view` (`RootView`), and sets up the canvas.
+- **`core.rescale(new_scale)`**: Dynamically rescales font sizes, layout metrics, and widget tree when display scale changes (`scalechanged`) or when selected in Settings dialog.
+- **`core.init()`**: Configures window size, High-DPI scaling factor, initializes fonts, initializes default menus (`menu.init_defaults()`), instantiates `core.root_view` (`RootView`), and sets up the canvas.
 - **`core.root_view`**: Top-level container managing split nodes, floating overlays, dialogs, and event routing.
 - **`core.push_clip_rect` / `core.pop_clip_rect`**: Nested hierarchical clipping stack.
 - **`core.request_cursor(cursor)`**: Dynamic cursor style requests (`arrow`, `ibeam`, `hand`, `sizeh`, `sizev`).
-- **`core.on_event(type, a, b, c, d)`**: Routes SDL3 events to `core.root_view` (mouse, keyboard, text input, wheel, scalechanged) and canvas handlers.
+- **`core.on_event(type, a, b, c, d)`**: Routes SDL3 events to `core.root_view` (mouse, keyboard, text input, wheel, scalechanged, menu), modal settings dialog, and in-window menu bar.
 - **`core.step_threads()`**: Manages coroutine wake times and asynchronous workers.
-- **`core.draw()`**: Composites base canvas and all active views/widgets in `core.root_view`.
+- **`core.draw()`**: Composites base canvas, active views/widgets, in-window menu bar (on Linux/Windows), and floating modal settings window.
 - **`core.run()`**: 60 FPS event loop with delta-time calculation and power-saving frame sleep.
 
 ### 4.3 UI Layer Framework (`runtime/core/` & `runtime/libraries/widget/`)
@@ -176,17 +206,41 @@ lua-lamp/
 - Exposes `style.colors`, `style.set_theme(name)`, and `style.toggle_theme()`.
 - Dynamically resolves and loads TTF fonts from `fonts/` (`PublicSans`, `SourceSans3`, `tabler-icons`).
 
+### 4.5 Unified Menu Subsystem (`src/menu.lua` & `src/menubar.lua`)
+- Cross-platform menu registry decoupling menu declaration from operating system presentation.
+- **macOS**: Translates menu trees into native Cocoa `NSMenu` objects rendered on the macOS top-of-screen bar.
+- **Linux / Windows**: Renders a borderless in-window horizontal menu bar with dropdowns, hover highlights, and shortcut badges.
+- Exposes `menu:register(category, items)`, `menu:bind(command_id, fn)`, `menu:trigger(command_id)`.
+
+### 4.6 Extensible Modal Settings Subsystem (`src/settings_dialog.lua`)
+- Floating modal dialog with background dimming shield, tabbed navigation, and live control panels.
+- Live DPI scaling switcher with instant real-time application (`core.rescale()`).
+- Typography typeface selector and live glyph preview.
+- Theme palette switcher (Dark/Light) and animated lamp toggle.
+- Extensibility hook: `settings:register_section(id, title, icon, render_fn)`.
+
+### 4.7 Mini-Flutter Developer Facade (`src/framework.lua`)
+- Comprehensive single-import entry point providing access to widgets, drawing primitives, dialogs, menu, and settings.
+
+### 4.8 Vector Drawing Primitives & Text Wrapping Subsystem (`src/ui.lua`)
+- **`ui.wrap_text(font, text, max_w)`**: Word-boundary text wrapping calculating exact font widths. Respects existing line breaks, splits multi-word sentences across lines without exceeding `max_w`, and falls back to character-level wrapping for single long words.
+- **`ui.draw_wrapped_text(font, text, x, y, max_w, color, line_spacing)`**: Renders wrapped multi-line text and returns `total_h, count` so callers can advance layout coordinates dynamically and prevent label collisions.
+- **Subpixel Anti-Aliased Primitives**: `ui.draw_rounded_box`, `ui.draw_circle`, `ui.draw_pill_badge`, `ui.draw_centered_text`, `ui.draw_centered_icon_and_text` with optical baseline compensation.
+
 ---
 
 ## 5. Keyboard & Input Interactions
 
-| Input | Trigger | Action |
-|:------|:--------|:-------|
-| <kbd>Space</kbd> | `keypressed` | Toggle central lamp filament glow & bloom |
-| <kbd>T</kbd> | `keypressed` | Toggle theme between Dark and Light |
-| <kbd>F11</kbd> | `keypressed` | Toggle Fullscreen window mode |
-| <kbd>Left Click</kbd> | `mousepressed` | Spawn expanding radial ripple at click coordinates / trigger widget |
-| <kbd>Q</kbd> / <kbd>Esc</kbd> | `keypressed` | Cleanly terminate application |
+| Input | Trigger | Platform | Action |
+|:------|:--------|:---------|:-------|
+| <kbd>Cmd+,</kbd> | `keypressed` / `menu` | macOS | Open / toggle modal Settings window |
+| <kbd>Ctrl+,</kbd> | `keypressed` / `menu` | Linux / Windows | Open / toggle modal Settings window |
+| <kbd>Space</kbd> | `keypressed` | All | Toggle central lamp filament glow & bloom |
+| <kbd>T</kbd> | `keypressed` | All | Toggle theme between Dark and Light |
+| <kbd>F11</kbd> | `keypressed` | All | Toggle Fullscreen window mode |
+| <kbd>Left Click</kbd> | `mousepressed` | All | Spawn radial ripple / interact with controls / switch tabs |
+| <kbd>Esc</kbd> | `keypressed` | All | Close open modal Settings dialog or menu dropdown / quit |
+| <kbd>Cmd+Q</kbd> / <kbd>Ctrl+Q</kbd> | `keypressed` / `menu` | All | Cleanly terminate application |
 
 ---
 

@@ -48,6 +48,18 @@ A modern, high-performance, cross-platform desktop application starter kit built
   - Compiles directly with `clang` via `scripts/build_engine.sh`.
   - Statically embeds Lua 5.4.7 core interpreter.
   - No dependency on external Lite XL binaries or text-editor core modules.
+- **Unified Cross-Platform Menu Subsystem**:
+  - **macOS**: Renders natively in the macOS top-of-screen menu bar using Apple AppKit `NSMenu` (`[NSApp mainMenu]`), matching Mac HIG with standard App, View, and Help menus.
+  - **Linux / Windows**: Renders a borderless in-window horizontal menu bar with smooth dropdowns, hover states, and keyboard badges.
+  - **Extensible Registry**: Applications register categories and items via `menu:register(category, items)` and bind actions via `menu:bind(command_id, handler)`.
+- **Extensible Modal Settings Window**:
+  - Floating modal dialog (`<Cmd+,>` on macOS, `<Ctrl+,>` on Linux/Windows) over the canvas.
+  - **Live DPI Scaling Switcher**: Real-time multiplier options (`Auto`, `1.0x`, `1.25x`, `1.5x`, `1.75x`, `2.0x`, `2.5x`) that instantly rescale typography, card dimensions, and widgets live at 60 FPS without restarting.
+  - **Typography & Font Selector**: Choose between `Public Sans` and `Source Sans 3`, adjust size presets, and preview rendering in a live glyph test box.
+  - **Appearance & Themes**: Quick toggles for Dark/Light mode and animated lamp filament.
+  - **Plugin Extensibility**: Other scripts and applications can add custom tabs via `settings:register_section(id, title, icon, render_fn)`.
+- **Mini-Flutter Developer Framework Facade**:
+  - Single-import developer facade (`local framework = require "src.framework"`) giving instant access to widgets (`Button`, `Toggle`, `TextBox`, `NoteBook`, `Dialog`, `MessageBox`), vector graphics (`UI`), Tabler icons (`Icons`), menus, and coroutine scheduling.
 - **Cross-Platform Bundling Out of the Box**:
   - **macOS App Bundle**: One-step script (`./scripts/bundle_macos_app.sh`) generating a standalone `Lua Lamp.app` embedding `libSDL3.0.dylib` with `@executable_path` dynamic load path rewriting, custom Retina `.icns`, and ad-hoc codesigning.
   - **macOS DMG Disk Image**: Automated script (`./scripts/create_dmg.sh`) producing a compressed, verified drag-and-drop `dist/LuaLamp-1.0.0.dmg`.
@@ -58,7 +70,7 @@ A modern, high-performance, cross-platform desktop application starter kit built
 - **Custom Procedural Icon Pipeline**:
   - Swift CoreGraphics script (`./scripts/generate_icon.swift`) generating multi-resolution macOS `.icns` (16x16 to 1024x1024 Retina) and standard Linux desktop PNGs/SVGs.
 - **Automated Verification Suite**:
-  - Headless test runner (`./bin/lualamp --test`) ensuring zero regressions across font loading, frame rendering, and event dispatching.
+  - Headless test runner (`./bin/lualamp --test`) ensuring zero regressions across font loading, frame rendering, menu events, settings modal, and widget lifecycle across 11 test stages.
 
 ---
 
@@ -92,13 +104,16 @@ lualamp
 
 ## ⌨️ Keyboard & Mouse Controls
 
-| Control | Action |
-|:--------|:-------|
-| <kbd>Space</kbd> | Toggle central lamp glow & beam animation |
-| <kbd>T</kbd> | Toggle between Dark and Light color themes |
-| <kbd>Left Click</kbd> | Spawn radiant ripple wave at mouse position |
-| <kbd>F11</kbd> | Toggle Fullscreen mode |
-| <kbd>Q</kbd> or <kbd>Esc</kbd> | Cleanly quit application |
+| Control | Platform | Action |
+|:--------|:---------|:-------|
+| <kbd>Cmd+,</kbd> | macOS | Open / toggle modal Settings window |
+| <kbd>Ctrl+,</kbd> | Linux / Windows | Open / toggle modal Settings window |
+| <kbd>Space</kbd> | All | Toggle central lamp glow & beam animation |
+| <kbd>T</kbd> | All | Toggle between Dark and Light color themes |
+| <kbd>F11</kbd> | All | Toggle Fullscreen mode |
+| <kbd>Left Click</kbd> | All | Spawn radiant ripple / interact with controls / switch tabs |
+| <kbd>Esc</kbd> | All | Close open Settings dialog or menu dropdown / quit |
+| <kbd>Cmd+Q</kbd> / <kbd>Ctrl+Q</kbd> | All | Cleanly quit application |
 
 ---
 
@@ -203,37 +218,59 @@ end)
 ### 4. Adjust Colors & Themes (`src/style.lua`)
 Edit the color tables in `src/style.lua` to brand your application. All typography scales automatically with High-DPI displays via `SCALE`.
 
-### 5. Build Desktop UIs with the Bundled Framework & Widgets
-Lua Lamp bundles the complete UI framework from Lite XL and the Lite XL Widgets library (under the MIT license) in `runtime/`:
-- **Views & Split Panes**: `core.view`, `core.node`, `core.rootview`
-- **Widgets**: `widget` (`Button`, `TextBox`, `CheckBox`, `Toggle`, `Label`, `Dialog`, `MessageBox`, `ListBox`, `TreeList`, `SelectBox`, `ProgressBar`, `NumberBox`)
-- **Scrollbars & Menus**: `core.scrollbar`, `core.contextmenu`, `core.nagview`
-- **Commands & Shortcuts**: `core.command`, `core.keymap`
-- **Rich Text Editor**: `core.docview`, `core.doc`
+### 5. Build Desktop UIs with the Mini-Flutter Framework Facade
+Lua Lamp exposes a unified developer facade (`src/framework.lua`) providing everything needed to build modern desktop applications:
+- **Unified Widgets**: `framework.Button`, `framework.TextBox`, `framework.CheckBox`, `framework.Toggle`, `framework.Label`, `framework.NoteBook`, `framework.SelectBox`, `framework.Dialog`, `framework.MessageBox`
+- **Vector Graphics & Themes**: `framework.UI` (smooth AA curves, optical baseline alignment, pills), `framework.Style`, `framework.Icons`
+- **Native Menus & Settings**: `framework.Menu` (native macOS / in-window Linux), `framework.Settings` (extensible modal dialog)
 
-#### Example: Creating Windows, Elements, and Formatted Text
+#### Example 1: Creating Modern Form Controls with `src.framework`
 ```lua
-local Widget = require "widget"
-local Button = require "widget.button"
-local TextBox = require "widget.textbox"
-local Toggle = require "widget.toggle"
-local Label = require "widget.label"
+local framework = require "src.framework"
 
 -- 1. Create a parent container panel
-local panel = Widget()
+local panel = framework.Widget()
 panel:set_position(40, 40)
 panel:set_size(320, 240)
 
 -- 2. Add modern interactive controls
-local title = Label(panel, "Application Settings")
-local input = TextBox(panel, "Default Value")
-local switch = Toggle(panel, "Enable Feature", true)
-local btn = Button(panel, "Save Changes")
+local title = framework.Label(panel, "Application Settings")
+local input = framework.TextBox(panel, "Default Value")
+local switch = framework.Toggle(panel, "Enable Feature", true)
+local btn = framework.Button(panel, "Save Changes")
 
 -- 3. Handle user interactions
 btn.on_click = function()
   print("Saved setting:", input:get_text(), "Feature enabled:", switch.enabled)
 end
+```
+
+#### Example 2: Extending the Settings Dialog with Custom Application Tabs
+```lua
+local framework = require "src.framework"
+
+-- Register a custom tab in the Settings modal window
+framework.Settings:register_section("database", "Database", framework.Icons.database or "D", function(x, y, w, h, s, c, dialog)
+  framework.renderer.draw_text(framework.Style.font_heading, "Database Configuration", x, y, c.text_primary)
+  framework.renderer.draw_text(framework.Style.font_small, "Configure your SQLite or PostgreSQL connection pool.", x, y + 26 * s, c.text_secondary)
+  
+  -- Render custom controls or preview boxes
+  framework.UI.draw_rounded_box(x, y + 54 * s, w, 80 * s, 8 * s, c.surface_hover, c.border, 1)
+end)
+```
+
+#### Example 3: Adding Native Menus
+```lua
+local framework = require "src.framework"
+
+-- Registers under 'Tools' in top macOS screen menu or Linux in-window menu bar
+framework.Menu:register("Tools", {
+  { text = "Run Diagnostics", command = "tools:diagnostics", action = function()
+    print("Running diagnostics...")
+  end },
+  framework.Menu.DIVIDER,
+  { text = "Preferences…", shortcut = "Cmd+,", command = "app:open-settings" }
+})
 ```
 
 ---
@@ -252,7 +289,8 @@ lua-lamp/
 │   ├── lua/                    # Embedded Lua 5.4.7 interpreter core
 │   ├── main.c                  # Native entry point and SDL3 initialization
 │   ├── renderer.c              # Software / SDL3 2D rendering pipeline
-│   └── renwindow.c             # SDL3 window management & High-DPI scaling
+│   ├── renwindow.c             # SDL3 window management & High-DPI scaling
+│   └── bundle_open.m           # macOS bundle resource resolution & native NSMenu bridge
 ├── runtime/                    # Complete UI Framework and Low-Level C-Bindings
 │   ├── colors/                 # Prebuilt color themes (default, monokai, solarized, etc.)
 │   ├── core/                   # UI Core: Object, View, Node, RootView, ScrollBar, Command, Keymap, DocView
@@ -263,7 +301,11 @@ lua-lamp/
 │   └── globals.lua             # Global table helpers
 ├── src/
 │   ├── canvas.lua              # Main "Hello World" canvas component
+│   ├── framework.lua           # Mini-Flutter developer application framework facade
 │   ├── icons.lua               # Tabler Icons codepoints registry
+│   ├── menu.lua                # Unified menu registry & cross-platform dispatcher
+│   ├── menubar.lua             # In-window borderless menu bar (Linux/Windows)
+│   ├── settings_dialog.lua     # Extensible floating modal settings window
 │   ├── style.lua               # Theme & font management
 │   └── ui.lua                  # Vector drawing primitives & UI components
 ├── fonts/                      # TrueType fonts (PublicSans, SourceSans, Tabler Icons)
@@ -276,7 +318,7 @@ lua-lamp/
 │   ├── build_runtime_linux.sh  # Native Linux C host compiler
 │   └── generate_icon.swift     # Procedural icon generator
 └── tests/
-    └── test_lualamp.lua        # Headless automated test suite (Stages 1-9)
+    └── test_lualamp.lua        # Headless automated test suite (Stages 1-11)
 ```
 
 ---

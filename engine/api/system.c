@@ -174,12 +174,33 @@ static void push_win32_error(lua_State *L, DWORD rc) {
 }
 #endif
 
+#ifdef __APPLE__
+int pop_pending_menu_command(char *buf, size_t buflen);
+int f_set_native_menu(lua_State *L);
+#else
+static int pop_pending_menu_command(char *buf, size_t buflen) {
+  (void)buf; (void)buflen;
+  return 0;
+}
+static int f_set_native_menu(lua_State *L) {
+  lua_pushboolean(L, 0);
+  return 1;
+}
+#endif
+
 static int f_poll_event(lua_State *L) {
   char buf[16];
+  char menu_buf[256];
   float mx, my;
   int w, h;
   SDL_Event e;
   SDL_Event event_plus;
+
+  if (pop_pending_menu_command(menu_buf, sizeof(menu_buf))) {
+    lua_pushstring(L, "menu");
+    lua_pushstring(L, menu_buf);
+    return 2;
+  }
 
 top:
   if ( !SDL_PollEvent(&e) ) {
@@ -187,6 +208,14 @@ top:
   }
 
   switch (e.type) {
+    case SDL_EVENT_USER:
+      if (pop_pending_menu_command(menu_buf, sizeof(menu_buf))) {
+        lua_pushstring(L, "menu");
+        lua_pushstring(L, menu_buf);
+        return 2;
+      }
+      goto top;
+
     case SDL_EVENT_QUIT:
       lua_pushstring(L, "quit");
       return 1;
@@ -1180,6 +1209,7 @@ static const luaL_Reg lib[] = {
   { "get_window_size",     f_get_window_size     },
   { "get_window_scale",    f_get_window_scale    },
   { "get_display_scale",   f_get_display_scale   },
+  { "set_native_menu",     f_set_native_menu     },
   { "set_window_size",     f_set_window_size     },
   { "set_text_input_rect", f_set_text_input_rect },
   { "clear_ime",           f_clear_ime           },

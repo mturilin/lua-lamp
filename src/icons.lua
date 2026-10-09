@@ -25,6 +25,10 @@ local icons = {
   star            = "\xee\xac\xae", -- U+EB2E star
   heart           = "\xee\xaa\xbe", -- U+EABE heart
   github          = "\xee\xb0\x9c", -- U+EC1C brand-github
+  device_desktop  = "\xee\xa9\xb4", -- U+EA74 device-desktop
+  typography      = "\xee\xad\x83", -- U+EB43 typography
+  palette         = "\xee\xab\xbe", -- U+EAFE palette
+  adjustments     = "\xee\xa8\x82", -- U+EA02 adjustments
 
   -- Status Badges & Alerts
   alert_triangle        = "\xee\xa8\x86", -- U+EA06 alert-triangle (outline)

@@ -82,6 +82,7 @@ static void init_window_icon(void) {
 
 #ifdef SDL_PLATFORM_APPLE
 void enable_momentum_scroll();
+void setup_default_macos_menu(void);
 #ifdef MACOS_USE_BUNDLE
 void set_macos_bundle_resources(lua_State *L);
 #endif
@@ -197,6 +198,7 @@ init_lua:
   #ifdef MACOS_USE_BUNDLE
     set_macos_bundle_resources(L);
   #endif
+  setup_default_macos_menu();
 #endif
   SDL_SetEventEnabled(SDL_EVENT_TEXT_INPUT, true);
   SDL_SetEventEnabled(SDL_EVENT_TEXT_EDITING, true);

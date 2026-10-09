@@ -191,4 +191,76 @@ function ui.draw_centered_icon_and_text(icon_font, icon_text, text_font, label_t
   return total_w
 end
 
+--- Word-wrap text to fit within max_w pixels using font measurement.
+--- Respects existing newlines and wraps at word boundaries.
+---@param font renderer.font
+---@param text string
+---@param max_w number Maximum width in pixels
+---@return string[] lines Array of wrapped text lines
+function ui.wrap_text(font, text, max_w)
+  if not font or not text or max_w <= 0 then return { tostring(text or "") } end
+  local lines = {}
+
+  for raw_line in (tostring(text) .. "\n"):gmatch("([^\r\n]*)\r?\n") do
+    if font:get_width(raw_line) <= max_w then
+      table.insert(lines, raw_line)
+    else
+      local cur_line = ""
+      for word in raw_line:gmatch("%S+") do
+        local test_line = (cur_line == "") and word or (cur_line .. " " .. word)
+        if font:get_width(test_line) <= max_w then
+          cur_line = test_line
+        else
+          if cur_line ~= "" then
+            table.insert(lines, cur_line)
+            cur_line = word
+          else
+            -- If a single word is longer than max_w, break it character-by-character
+            local partial = ""
+            for i = 1, #word do
+              local ch = word:sub(i, i)
+              if font:get_width(partial .. ch) <= max_w then
+                partial = partial .. ch
+              else
+                table.insert(lines, partial)
+                partial = ch
+              end
+            end
+            cur_line = partial
+          end
+        end
+      end
+      if cur_line ~= "" then
+        table.insert(lines, cur_line)
+      end
+    end
+  end
+
+  if #lines == 0 then table.insert(lines, "") end
+  return lines
+end
+
+--- Render multi-line text with automatic word wrapping within max_w
+---@param font renderer.font
+---@param text string
+---@param x number Left coordinate
+---@param y number Top coordinate
+---@param max_w number Maximum width in pixels
+---@param color renderer.color
+---@param line_spacing? number Additional spacing between lines (defaults to 3 * SCALE)
+---@return number total_h Total rendered height in pixels
+---@return number count Number of lines rendered
+function ui.draw_wrapped_text(font, text, x, y, max_w, color, line_spacing)
+  if not font or not text then return 0, 0 end
+  local scale = SCALE or 1
+  local lh = font:get_height() + (line_spacing or math.floor(3 * scale))
+  local lines = ui.wrap_text(font, text, max_w)
+  local cur_y = y
+  for _, line in ipairs(lines) do
+    renderer.draw_text(font, line, x, cur_y, color)
+    cur_y = cur_y + lh
+  end
+  return #lines * lh, #lines
+end
+
 return ui
