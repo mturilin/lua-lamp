@@ -132,9 +132,10 @@ DIR_NAME="$(basename "$APP_DIR")"
 # Capitalize directory name for default app title
 DEFAULT_NAME="$(echo "${DIR_NAME:0:1}" | tr '[:lower:]' '[:upper:]')${DIR_NAME:1}"
 
+DIR_LOWER="$(echo "$DIR_NAME" | tr '[:upper:]' '[:lower:]')"
 APP_NAME="$(read_json_field "name" "$DEFAULT_NAME")"
 DISPLAY_NAME="$(read_json_field "displayName" "$APP_NAME")"
-APP_ID="$(read_json_field "identifier" "com.lualamp.${DIR_NAME,,}")"
+APP_ID="$(read_json_field "identifier" "com.lualamp.$DIR_LOWER")"
 APP_VERSION="$(read_json_field "version" "1.0.0")"
 ENTRY_FILE="$(read_json_field "entry" "main.lua")"
 ICON_REL="$(read_json_field "icon" "")"

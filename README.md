@@ -102,6 +102,40 @@ lualamp
 
 ---
 
+## 🛠️ Developing & Packaging Downstream Applications
+
+Lua Lamp functions as a **Platform SDK** (a "Mini-Flutter for Lua & SDL3"). Downstream projects (like Pinglet or internal developer tools) do **not** copy the C engine or build scripts. They exist as lightweight, independent repositories.
+
+### 1. Scaffold a New Application
+```bash
+lualamp init ./apps/my-app "My App" "My App — Custom Tool"
+cd ./apps/my-app
+```
+This generates a clean 2-file project:
+- `app.json`: Metadata manifest (name, bundle identifier, version, window size, icon).
+- `main.lua`: Declarative application code using the `framework` facade.
+
+### 2. Run in Development Mode
+Run your application instantly against the installed Lua Lamp engine:
+```bash
+lualamp run .
+# Or specify project path:
+lualamp run ./apps/my-app
+```
+
+### 3. Package Standalone Native Distribution
+Build a 100% standalone, zero-dependency native application bundle with your custom name, icon, and identifier:
+```bash
+# On macOS: Produces dist/MyApp.app and dist/MyApp-1.0.0.dmg
+lualamp build .
+
+# On Linux: Produces dist/my-app-linux-x86_64.tar.gz
+lualamp build . --linux
+```
+The resulting executable has all dynamic libraries (`libSDL3.0.dylib`) embedded and rewritten with `@executable_path` load commands and is ad-hoc codesigned. End users need zero dependencies installed.
+
+---
+
 ## ⌨️ Keyboard & Mouse Controls
 
 | Control | Platform | Action |

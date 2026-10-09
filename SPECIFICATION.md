@@ -148,6 +148,21 @@ It serves dual purposes:
   - **Cross-Platform Safety**:
     - On Linux/Windows or headless environments, permission queries safely degrade to `"granted"` or `"unsupported"`, preventing unhandled exceptions.
 
+### Invariant 13: Universal Downstream Application SDK & Packaging Pipeline
+- **Platform SDK & Dependency Decoupling**:
+  - Downstream applications built on Lua Lamp (such as Pinglet or custom developer tools) MUST NOT clone or vendor the C engine, SDL3 build scripts, or core runtime files.
+  - Lua Lamp operates as a central Platform SDK providing runtime execution (`lualamp run <dir>`), project scaffolding (`lualamp init <dir> [name]`), and native distribution packaging (`lualamp build <dir> [options]`).
+- **Application Project Manifest (`app.json`)**:
+  - Downstream projects define metadata via `app.json` (specifying `name`, `displayName`, `identifier`, `version`, `entry`, `icon`, and initial `window` dimensions).
+  - The runtime automatically reads `app.json` to configure window titles, sizes, and entry scripts without boilerplate.
+- **Declarative `framework.App` API**:
+  - Applications initialize via `framework.App { name, title, width, height, menu, settings, initial_view }` and mount views directly into the root view hierarchy.
+- **Universal Native Packager (`scripts/package_app.sh`)**:
+  - **macOS (`--macos` / `--dmg`)**: Produces a 100% standalone native `<AppName>.app` bundle and compressed `<AppName>-<Version>.dmg`. Automatically injects the Mach-O binary (renamed to the app name), embeds `libSDL3.0.dylib` with `@executable_path` load commands, generates Retina `.icns` icons, writes branded `Info.plist`, clears quarantine flags, and ad-hoc codesigns.
+  - **Linux (`--linux`)**: Produces a self-contained portable directory `<AppName>-linux-$ARCH/` and `<AppName>-linux-$ARCH.tar.gz` with native ELF executable, `data/` assets, `.desktop` integration, and icon integration.
+- **Zero-Dependency End-User Distribution**:
+  - Packaged applications require zero external dependencies: end users do not need Lua, SDL, or Homebrew installed.
+
 ---
 
 ## 3. Architecture & Directory Blueprint
