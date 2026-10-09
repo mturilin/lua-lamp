@@ -88,7 +88,7 @@ function MainView:new()
 end
 
 function MainView:draw()
-  self:draw_background(style.syntax.background)
+  self:draw_background(style.colors.background)
   local s = style.scale
 
   -- Centered Greeting Card
@@ -96,13 +96,13 @@ function MainView:draw()
   local title = "Hello from " .. (system.get_window_title and system.get_window_title():match("^(.-) —") or "Lua Lamp App")
   local tx = math.floor((self.size.x - title_font:get_width(title)) / 2)
   local ty = math.floor(self.size.y * 0.35)
-  renderer.draw_text(title_font, title, tx, ty, style.syntax.text)
+  renderer.draw_text(title_font, title, tx, ty, style.colors.text_primary)
 
   -- Counter Label
   local count_text = string.format("Interactive Clicks: %d", self.counter)
   local cx = math.floor((self.size.x - style.font_normal:get_width(count_text)) / 2)
   local cy = ty + math.floor(40 * s)
-  renderer.draw_text(style.font_normal, count_text, cx, cy, style.syntax.comment or style.syntax.text)
+  renderer.draw_text(style.font_normal, count_text, cx, cy, style.colors.text_secondary)
 
   -- Pinglet Button Highlight Standard Action Button
   local bw, bh = math.floor(180 * s), math.floor(36 * s)

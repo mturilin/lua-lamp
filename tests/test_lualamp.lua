@@ -389,6 +389,56 @@ settings:hide()
 
 print("[PASS] Native macOS Permissions Framework, Deep-Link URLs, & UI Components verified.")
 
+-- 13. Test Downstream Application SDK & framework.App Contract
+assert(type(framework.App) == "function", "framework.App must be a callable function")
+assert(framework.View ~= nil, "framework.View must be exported")
+
+local test_init_called = false
+local TestView = framework.View:extend()
+function TestView:new()
+  TestView.super.new(self)
+  self.rendered = false
+end
+function TestView:draw()
+  self.rendered = true
+end
+
+local app_instance = framework.App {
+  title = "Test App — Latency Monitor",
+  width = 1000,
+  height = 650,
+  on_init = function()
+    test_init_called = true
+  end,
+  menu = {
+    ["AppTest"] = {
+      { text = "Test Action", command = "test:action" }
+    }
+  },
+  initial_view = TestView(),
+}
+
+assert(test_init_called == true, "framework.App on_init callback must be called")
+assert(app_instance ~= nil, "framework.App must return the active view instance")
+assert(core.root_view.root_node.active_view == app_instance, "framework.App must mount initial_view into root_node")
+if system.get_window_title then
+  assert(system.get_window_title():find("Test App"), "framework.App must set system window title")
+end
+assert(menu.categories["AppTest"] ~= nil, "framework.App must register custom application menus")
+
+-- Test frame rendering with mounted downstream view
+renderer.begin_frame()
+core.draw()
+renderer.end_frame()
+assert(app_instance.rendered == true, "Downstream app view draw method must be invoked during frame rendering")
+
+-- Restore default CanvasView
+core.root_view.root_node.views = { core.canvas_view }
+core.root_view.root_node.active_view = core.canvas_view
+core.active_view = core.canvas_view
+
+print("[PASS] Universal Downstream Application SDK, framework.App, & View Mounting verified.")
+
 print("\n========================================")
 print("ALL LUA LAMP VERIFICATION TESTS PASSED!")
 print("========================================")
