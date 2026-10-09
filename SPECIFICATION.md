@@ -184,6 +184,11 @@ It serves dual purposes:
   - Features dual-mode switching via top-bar segmented pill (`Gallery` vs `Canvas` classic lamp stage card).
   - Categorized sidebar: Buttons & Badges, Sliders & Progress, Toggles & Checkboxes, Text Inputs, Scrollable Panels, Banners & Modals, Iconography & Font Glyphs, All Components.
   - Live interactive controls: draggable sliders (`ui.draw_slider`), macOS/iOS animated toggles (`ui.draw_toggle`), accent checkboxes (`ui.draw_checkbox`), progress bars (`ui.draw_progressbar`), interactive text input with focus ring and cursor (`ui.draw_input_box`), nested scroll views, and privacy warning banners.
+  - **Dynamic On-Screen Hitbox Registration Standard**:
+    - Interactive controls dynamically register exact screen pixel coordinates (`self:register_hitbox`) during the drawing pass, eliminating coordinate drift and magic offset desynchronization.
+    - **Generous Hit Targets**: Toggles and checkboxes feature full-width hit targets spanning both the control pill/box and the accompanying text label (`tw + gap + label_w`), conforming to native macOS desktop accessibility guidelines.
+    - **Viewport Scissor Integration**: Clicks are validated against `scroll_view:is_in_viewport(px, py)` to guarantee controls scrolled above or below the fold cannot receive phantom clicks.
+    - **Adaptive Dual/Single-Column Layout**: Toggles & Checkboxes dynamically adapt between a two-column grid (`inner_w >= 500 * s`) and an expanded single-column stack on narrow viewports, preventing clipping or overflow.
 - **Verified Tabler Icon Font Mapping (`src/icons.lua`)**:
   - All icon constants map directly to exact UTF-8 byte sequences verified against native FreeType cmap in `fonts/tabler-icons.ttf` (`shield`, `shield_check`, `camera`, `microphone`, `folder`, `accessible`, `external_link`, `video`, `layout`, `box`, `list`, `adjustments`, `palette`, `typography`, etc.).
 

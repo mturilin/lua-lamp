@@ -539,6 +539,92 @@ assert(gallery.scroll_view.scroll_y > 0, "RootView update must interpolate galle
 core.on_event("mousewheel", 1, 0)
 core.root_view:update()
 
+-- Test Interactive Toggles & Checkboxes in Category View and Continuous View
+gallery.active_tab = "toggles"
+gallery.scroll_view.scroll_y = 0
+gallery.scroll_view.scroll_to_y = 0
+renderer.begin_frame()
+gallery:draw(1000, 650)
+renderer.end_frame()
+
+local wifi_hb, alerts_hb, auto_hb, tele_hb
+for _, hb in ipairs(gallery.hitboxes) do
+  if hb.id == "wifi" then wifi_hb = hb end
+  if hb.id == "alerts" then alerts_hb = hb end
+  if hb.id == "autoupdate" then auto_hb = hb end
+  if hb.id == "telemetry" then tele_hb = hb end
+end
+
+assert(wifi_hb ~= nil, "Wi-Fi toggle hitbox must be registered in toggles tab")
+assert(alerts_hb ~= nil, "Alerts toggle hitbox must be registered in toggles tab")
+assert(auto_hb ~= nil, "Auto-update checkbox hitbox must be registered in toggles tab")
+assert(tele_hb ~= nil, "Telemetry checkbox hitbox must be registered in toggles tab")
+
+-- 1. Click directly on Wi-Fi toggle pill
+local init_wifi = gallery.toggle_wifi
+local click_pill_x = wifi_hb.x + 10
+local click_pill_y = wifi_hb.y + math.floor(wifi_hb.h / 2)
+gallery:on_mouse_pressed("left", click_pill_x, click_pill_y)
+assert(gallery.toggle_wifi == not init_wifi, "Clicking Wi-Fi toggle pill should toggle its state")
+assert(gallery.status_msg:find("Wi-Fi Toggle", 1, true) ~= nil, "Status message should reflect Wi-Fi toggle state")
+
+-- 2. Click on the Wi-Fi toggle text label (generous target)
+local click_label_x = wifi_hb.x + wifi_hb.w - 10
+local click_label_y = wifi_hb.y + math.floor(wifi_hb.h / 2)
+gallery:on_mouse_pressed("left", click_label_x, click_label_y)
+assert(gallery.toggle_wifi == init_wifi, "Clicking Wi-Fi label should toggle state back")
+
+-- 3. Click on Alerts toggle
+local init_alerts = gallery.toggle_alerts
+gallery:on_mouse_pressed("left", alerts_hb.x + 10, alerts_hb.y + math.floor(alerts_hb.h / 2))
+assert(gallery.toggle_alerts == not init_alerts, "Clicking Alerts toggle should flip state")
+
+-- 4. Click on Automatic Updates checkbox
+local init_auto = gallery.check_autoupdate
+gallery:on_mouse_pressed("left", auto_hb.x + 10, auto_hb.y + math.floor(auto_hb.h / 2))
+assert(gallery.check_autoupdate == not init_auto, "Clicking Automatic Updates checkbox should toggle state")
+
+-- 5. Click on Telemetry checkbox
+local init_tele = gallery.check_telemetry
+gallery:on_mouse_pressed("left", tele_hb.x + 10, tele_hb.y + math.floor(tele_hb.h / 2))
+assert(gallery.check_telemetry == not init_tele, "Clicking Telemetry checkbox should toggle state")
+
+-- 6. Test interaction in continuous "all" tab with scrolling
+gallery.active_tab = "all"
+gallery.scroll_view.scroll_y = 0
+gallery.scroll_view.scroll_to_y = 0
+renderer.begin_frame()
+gallery:draw(1000, 650)
+renderer.end_frame()
+
+local wifi_all_hb
+for _, hb in ipairs(gallery.hitboxes) do
+  if hb.id == "wifi" then wifi_all_hb = hb break end
+end
+assert(wifi_all_hb ~= nil, "Wi-Fi toggle hitbox must be registered in 'all' tab")
+assert(gallery.scroll_view:is_in_viewport(wifi_all_hb.x, wifi_all_hb.y) == false, "Toggles should be below fold at scroll_y=0")
+
+-- Scroll down so toggles section enters the visible viewport
+local s_mult = style.scale or 1.0
+local target_scroll = wifi_all_hb.y - gallery.scroll_view.viewport_y - math.floor(50 * s_mult)
+gallery.scroll_view.scroll_to_y = target_scroll
+gallery.scroll_view.scroll_y = target_scroll
+renderer.begin_frame()
+gallery:draw(1000, 650)
+renderer.end_frame()
+
+for _, hb in ipairs(gallery.hitboxes) do
+  if hb.id == "wifi" then wifi_all_hb = hb break end
+end
+assert(gallery.scroll_view:is_in_viewport(wifi_all_hb.x, wifi_all_hb.y) == true, "Toggles should be inside viewport after scrolling")
+
+local before_wifi = gallery.toggle_wifi
+local click_x = wifi_all_hb.x + 10
+local click_y = wifi_all_hb.y + math.floor(wifi_all_hb.h / 2)
+local res = gallery:on_mouse_pressed("left", click_x, click_y)
+assert(res == true, "Click event should be consumed")
+assert(gallery.toggle_wifi == not before_wifi, "Clicking Wi-Fi toggle in 'all' tab after scrolling should toggle state")
+
 print("[PASS] ScrollView Component, Vector UI Primitives, Verified Icons & Component Gallery verified.")
 
 print("\n========================================")
