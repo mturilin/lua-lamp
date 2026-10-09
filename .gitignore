@@ -14,6 +14,7 @@ Thumbs.db
 # Build artifacts & binaries
 bin/*_bin
 bin/lualamp_bin
+bin/netauth
 *.o
 *.a
 *.dylib

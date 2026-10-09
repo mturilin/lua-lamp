@@ -111,3 +111,10 @@ clang -O2 \
 
 chmod +x "$OUTPUT_BIN"
 echo "✓ Native engine compiled successfully: $OUTPUT_BIN"
+
+if [ -f "$REPO_DIR/engine/netauth.m" ]; then
+  echo "Compiling netauth companion helper..."
+  clang -O2 -framework Foundation -framework Network "$REPO_DIR/engine/netauth.m" -o "$BIN_DIR/netauth"
+  chmod +x "$BIN_DIR/netauth"
+  echo "✓ Netauth companion helper compiled: $BIN_DIR/netauth"
+fi

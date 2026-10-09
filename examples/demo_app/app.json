@@ -4,6 +4,9 @@
   "identifier": "com.lualamp.demoapp",
   "version": "1.0.0",
   "entry": "main.lua",
+  "permissions": [
+    "local_network"
+  ],
   "window": {
     "width": 1000,
     "height": 650

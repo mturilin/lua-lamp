@@ -25,11 +25,21 @@ local MainView = lamp.View:extend()
 function MainView:new()
   MainView.super.new(self)
   self.counter = 0
+  -- Create non-blocking inline permission warning banner if access is not granted
+  self.banner = lamp.create_permission_banner(lamp.Permissions.LOCAL_NETWORK, {
+    message = "Local network access required to ping gateway and discover devices.",
+  })
 end
 
 function MainView:draw()
   self:draw_background(style.colors.background)
   local s = style.scale
+
+  -- Draw Permission Warning Banner at Top of View if needed
+  local banner_h = 0
+  if self.banner and self.banner.visible and not self.banner.dismissed then
+    banner_h = self.banner:draw(0, 0, self.size.x, math.floor(36 * s))
+  end
 
   -- Centered Greeting Card
   local title_font = style.font_large or style.font_hero
@@ -55,8 +65,20 @@ function MainView:draw()
   })
 end
 
+function MainView:on_mouse_moved(px, py, dx, dy)
+  local s = style.scale
+  if self.banner and self.banner.visible and not self.banner.dismissed then
+    self.banner:on_mouse_moved(px, py, 0, 0, self.size.x, math.floor(36 * s))
+  end
+end
+
 function MainView:on_mouse_pressed(button, px, py, clicks)
   local s = style.scale
+  local banner_h = math.floor(36 * s)
+  if self.banner and self.banner:on_mouse_pressed(button, px, py, 0, 0, self.size.x, banner_h) then
+    return true
+  end
+
   local bw, bh = math.floor(180 * s), math.floor(36 * s)
   local bx = math.floor((self.size.x - bw) / 2)
   local ty = math.floor(self.size.y * 0.35)
@@ -72,5 +94,6 @@ end
 
 -- 4. Initialize and launch application
 return lamp.App {
+  permissions = { "local_network" },
   initial_view = MainView(),
 }

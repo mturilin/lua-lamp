@@ -335,22 +335,29 @@ framework.draw_button(framework.Style.font_normal, "Follow", btn2_x, btn_y, btn2
 local framework = require "src.framework"
 local perm = framework.Permissions
 
--- 1. Query real-time permission status
-local status = perm.get_status(perm.LOCAL_NETWORK)
-if not perm.is_granted(perm.LOCAL_NETWORK) then
+-- 1. Declarative Permission Request in framework.App or app.json
+-- Automatically triggers non-blocking consent check on macOS boot
+framework.App {
+  permissions = { "local_network", "accessibility" },
+  initial_view = MainView(),
+}
+
+-- 2. Query real-time permission status via framework convenience methods
+local status = framework.get_permission_status(perm.LOCAL_NETWORK)
+if not framework.is_permission_granted(perm.LOCAL_NETWORK) then
   print("Local Network authorization status:", status)
 end
 
--- 2. Request authorization asynchronously without blocking the 60 FPS event loop
-perm.request(perm.LOCAL_NETWORK, { target_ip = "192.168.1.1" }, function(st, granted)
+-- 3. Request authorization asynchronously without blocking the 60 FPS event loop
+framework.request_permission(perm.LOCAL_NETWORK, { target_ip = "192.168.1.1" }, function(st, granted)
   print("Local Network permission updated:", st, "Granted:", granted)
 end)
 
--- 3. Instant deep-linking to target macOS System Settings pane
+-- 4. Instant deep-linking to target macOS System Settings pane
 perm.open_settings(perm.ACCESSIBILITY)
 
--- 4. Create an inline warning banner widget (auto-hides on grant, conforms to Pinglet button standard)
-local banner = perm.create_banner(perm.LOCAL_NETWORK, {
+-- 5. Create an inline warning banner widget (auto-hides on grant, conforms to Pinglet button standard)
+local banner = framework.create_permission_banner(perm.LOCAL_NETWORK, {
   message = "Local network access is required to detect gateway ping latency.",
   action_label = "Open Settings",
   on_action = function()
@@ -361,6 +368,9 @@ local banner = perm.create_banner(perm.LOCAL_NETWORK, {
 -- Inside your draw cycle:
 banner:draw(x, y, w, 36 * SCALE)
 ```
+
+> **Note**: On macOS, a live **Permissions** tab is automatically registered in the Settings dialog (<kbd>Cmd+,</kbd>). When packaging downstream applications via `./bin/lualamp build <dir>` or `package_app.sh`, the `netauth` companion helper, `libnetauth.dylib`, and standard Privacy Usage descriptions (`NSLocalNetworkUsageDescription`, `NSBonjourServices`, etc.) are automatically compiled and injected into the target application bundle.
+
 
 ---
 

@@ -315,17 +315,24 @@ function permissions.request(perm_type, options, callback)
       pcall(system.macos_request_permission, "local_network", target_ip)
     end
     -- Try companion helper binary if available (Pinglet companion pattern)
-    local helper_path = (DATADIR or USERDIR or "") .. "/../MacOS/netauth"
-    local f = io.open(helper_path, "r")
-    if f then
-      f:close()
-      pcall(function()
-        local process = require "process"
-        process.start({ helper_path, target_ip }, {
-          stdout = process.REDIRECT_DISCARD,
-          stderr = process.REDIRECT_DISCARD,
-        })
-      end)
+    local candidate_paths = {
+      (DATADIR or rawget(_G, "MACOS_RESOURCES") or USERDIR or "") .. "/../MacOS/netauth",
+      (DATADIR or rawget(_G, "MACOS_RESOURCES") or USERDIR or "") .. "/bin/netauth",
+      "bin/netauth",
+    }
+    for _, helper_path in ipairs(candidate_paths) do
+      local f = io.open(helper_path, "r")
+      if f then
+        f:close()
+        pcall(function()
+          local process = require "process"
+          process.start({ helper_path, target_ip }, {
+            stdout = process.REDIRECT_DISCARD,
+            stderr = process.REDIRECT_DISCARD,
+          })
+        end)
+        break
+      end
     end
   else
     if system and system.macos_request_permission then
@@ -543,6 +550,7 @@ end
 
 --- Register the native Permissions tab inside framework.Settings
 function permissions.register_settings_tab()
+  if not permissions.is_macos() then return end
   local settings = require "src.settings_dialog"
 
   local function render_permissions_tab(panel_x, panel_y, panel_w, panel_h, s, c, dialog)

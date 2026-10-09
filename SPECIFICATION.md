@@ -141,10 +141,18 @@ It serves dual purposes:
   - **Asynchronous Coroutine Observation**:
     - `permissions.request(perm, options, callback)` steps non-blocking poll loops via `core.add_thread` and yields control across frames until user consent is captured.
   - **Native Companion Binary Packaging**:
-    - Standalone `Contents/MacOS/netauth` helper and `Contents/Resources/libnetauth.dylib` are built from `engine/netauth.m` directly into the `.app` bundle.
+    - Standalone `Contents/MacOS/netauth` helper and `Contents/Resources/libnetauth.dylib` are built from `engine/netauth.m` directly into the `.app` bundle (both for Lua Lamp and any downstream application packaged via `scripts/package_app.sh`).
   - **Native-Feeling UI Components**:
     - `permissions.create_banner(perm, options)`: Renders an inline warning card conforming to Rule 1 and Rule 2 (borderless surface, optical baseline shift, tinted button).
-    - `permissions.register_settings_tab()`: Automatically registers a live "Permissions" tab in `framework.Settings` (`Cmd+,`) displaying real-time authorization badges (`Granted`, `Open Settings`).
+    - `permissions.register_settings_tab()`: Automatically registers a live "Permissions" tab in `framework.Settings` (`Cmd+,`) displaying real-time authorization badges (`Granted`, `Open Settings`). Auto-wired during `core.init()` on macOS.
+  - **Framework Level Convenience Accessors**:
+    - `framework.get_permission_status(perm, options)`: Returns authorization status string.
+    - `framework.is_permission_granted(perm)`: Convenience boolean test.
+    - `framework.request_permission(perm, options, callback)`: Non-blocking asynchronous consent flow.
+    - `framework.create_permission_banner(perm, options)`: Factory for Pinglet-standard inline permission warning banners.
+  - **Declarative Permissions Integration**:
+    - Supported in `app.json` (`"permissions": ["local_network", "accessibility"]`) and `framework.App { permissions = { "local_network" } }`.
+    - Engine automatically initiates non-blocking preflight consent checks on boot without freezing UI frames.
   - **Cross-Platform Safety**:
     - On Linux/Windows or headless environments, permission queries safely degrade to `"granted"` or `"unsupported"`, preventing unhandled exceptions.
 
@@ -153,12 +161,12 @@ It serves dual purposes:
   - Downstream applications built on Lua Lamp (such as Pinglet or custom developer tools) MUST NOT clone or vendor the C engine, SDL3 build scripts, or core runtime files.
   - Lua Lamp operates as a central Platform SDK providing runtime execution (`lualamp run <dir>`), project scaffolding (`lualamp init <dir> [name]`), and native distribution packaging (`lualamp build <dir> [options]`).
 - **Application Project Manifest (`app.json`)**:
-  - Downstream projects define metadata via `app.json` (specifying `name`, `displayName`, `identifier`, `version`, `entry`, `icon`, and initial `window` dimensions).
-  - The runtime automatically reads `app.json` to configure window titles, sizes, and entry scripts without boilerplate.
+  - Downstream projects define metadata via `app.json` (specifying `name`, `displayName`, `identifier`, `version`, `entry`, `icon`, `permissions`, and initial `window` dimensions).
+  - The runtime automatically reads `app.json` to configure window titles, sizes, system permissions, and entry scripts without boilerplate.
 - **Declarative `framework.App` API**:
-  - Applications initialize via `framework.App { name, title, width, height, menu, settings, initial_view }` and mount views directly into the root view hierarchy.
+  - Applications initialize via `framework.App { name, title, width, height, menu, settings, permissions, initial_view }` and mount views directly into the root view hierarchy.
 - **Universal Native Packager (`scripts/package_app.sh`)**:
-  - **macOS (`--macos` / `--dmg`)**: Produces a 100% standalone native `<AppName>.app` bundle and compressed `<AppName>-<Version>.dmg`. Automatically injects the Mach-O binary (renamed to the app name), embeds `libSDL3.0.dylib` with `@executable_path` load commands, generates Retina `.icns` icons, writes branded `Info.plist`, clears quarantine flags, and ad-hoc codesigns.
+  - **macOS (`--macos` / `--dmg`)**: Produces a 100% standalone native `<AppName>.app` bundle and compressed `<AppName>-<Version>.dmg`. Automatically injects the Mach-O binary (renamed to the app name), embeds `libSDL3.0.dylib` with `@executable_path` load commands, compiles the `netauth` companion helper and `libnetauth.dylib`, generates Retina `.icns` icons, writes branded `Info.plist` with full privacy usage strings (`NSLocalNetworkUsageDescription`, `NSBonjourServices`, `NSCameraUsageDescription`, `NSMicrophoneUsageDescription`), clears quarantine flags, and ad-hoc codesigns.
   - **Linux (`--linux`)**: Produces a self-contained portable directory `<AppName>-linux-$ARCH/` and `<AppName>-linux-$ARCH.tar.gz` with native ELF executable, `data/` assets, `.desktop` integration, and icon integration.
 - **Zero-Dependency End-User Distribution**:
   - Packaged applications require zero external dependencies: end users do not need Lua, SDL, or Homebrew installed.

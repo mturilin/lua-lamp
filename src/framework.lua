@@ -41,8 +41,28 @@ framework.ColorPicker = require "widget.colorpicker"
 framework.MessageBox  = require "widget.messagebox"
 framework.Dialog      = require "widget.dialog"
 
+--- Check current status of a permission ("granted", "denied", "not_determined", "unsupported")
+function framework.get_permission_status(perm_type, options)
+  return framework.Permissions.get_status(perm_type, options)
+end
+
+--- Check if a permission is currently granted
+function framework.is_permission_granted(perm_type)
+  return framework.Permissions.is_granted(perm_type)
+end
+
+--- Request authorization for a permission asynchronously with optional callback
+function framework.request_permission(perm_type, options, callback)
+  return framework.Permissions.request(perm_type, options, callback)
+end
+
+--- Create a Pinglet-standard inline permission warning/action banner
+function framework.create_permission_banner(perm_type, options)
+  return framework.Permissions.create_banner(perm_type, options)
+end
+
 --- Declarative Application Launcher / Configuration
----@param config { name: string?, title: string?, width: number?, height: number?, menu: table?, settings: table?, initial_view: any, on_init: function? }
+---@param config { name: string?, title: string?, width: number?, height: number?, menu: table?, settings: table?, permissions: table?, initial_view: any, on_init: function? }
 function framework.App(config)
   if type(config) ~= "table" then return end
 
@@ -67,16 +87,53 @@ function framework.App(config)
     end
   end
 
+  -- Normalize & Process Declarative System Permissions
+  local declared_perms = {}
+  local raw_perms = config.permissions or (core.manifest and core.manifest.permissions)
+  if type(raw_perms) == "table" then
+    for k, v in pairs(raw_perms) do
+      if type(k) == "number" and type(v) == "string" then
+        declared_perms[v] = { auto_request = true }
+      elseif type(k) == "string" then
+        if type(v) == "table" then
+          declared_perms[k] = v
+        elseif v == true then
+          declared_perms[k] = { auto_request = true }
+        elseif v == false then
+          declared_perms[k] = { auto_request = false }
+        end
+      end
+    end
+  end
+
+  framework.declared_permissions = declared_perms
+
+  if framework.Permissions.is_macos() then
+    for perm_id, opts in pairs(declared_perms) do
+      if opts.auto_request ~= false then
+        framework.Permissions.request(perm_id, opts, function(status, granted)
+          if opts.on_change then
+            opts.on_change(status, granted)
+          end
+          if core then core.redraw = true end
+        end)
+      end
+    end
+  end
+
   if config.on_init then
     config.on_init()
   end
 
   local view = config.initial_view or (config.build and config.build())
-  if view and core.root_view then
-    core.root_view.root_node.views = { view }
-    core.root_view.root_node.active_view = view
-    core.active_view = view
-    core.redraw = true
+  if view then
+    view.permissions = declared_perms
+    if core.root_view then
+      core.root_view.root_node.views = { view }
+      core.root_view.root_node.active_view = view
+      core.active_view = view
+      core.redraw = true
+    end
   end
 
   return view

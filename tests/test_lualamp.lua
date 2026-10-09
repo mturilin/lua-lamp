@@ -79,16 +79,25 @@ print("[PASS] UI geometric calculations and multi-line text wrapping verified.")
 
 -- 6. Test Coroutine Scheduler
 local thread_executed = false
+local initial_thread_count = #core.threads
 core.add_thread(function()
   thread_executed = true
 end)
-assert(#core.threads == 1, "Thread should be registered in scheduler")
+assert(#core.threads == initial_thread_count + 1, "Thread should be registered in scheduler")
 core.step_threads()
 assert(thread_executed == true, "Thread should have executed upon stepping")
-assert(#core.threads == 0, "Dead thread should be purged from scheduler")
+assert(#core.threads <= initial_thread_count, "Dead thread should be purged from scheduler")
 print("[PASS] Coroutine worker thread scheduler verified.")
 
 -- 7. Test Frame Rendering Compositor
+if not core.canvas_view then
+  local CanvasView = require "src.canvas_view"
+  core.canvas_view = CanvasView()
+end
+core.root_view.root_node.views = { core.canvas_view }
+core.root_view.root_node.active_view = core.canvas_view
+core.active_view = core.canvas_view
+
 local win_w, win_h = renderer.get_size()
 print(string.format("Testing SDL3 Compositor Frame Rendering (Window: %dx%d)...", math.floor(win_w), math.floor(win_h)))
 
@@ -403,10 +412,20 @@ function TestView:draw()
   self.rendered = true
 end
 
+-- Test framework permissions convenience methods
+assert(type(framework.get_permission_status) == "function", "framework.get_permission_status must be exposed")
+assert(type(framework.is_permission_granted) == "function", "framework.is_permission_granted must be exposed")
+assert(type(framework.create_permission_banner) == "function", "framework.create_permission_banner must be exposed")
+local fw_banner = framework.create_permission_banner(framework.Permissions.LOCAL_NETWORK, {
+  message = "Network access required.",
+})
+assert(fw_banner ~= nil and fw_banner.perm_type == "local_network", "framework.create_permission_banner must return banner")
+
 local app_instance = framework.App {
   title = "Test App — Latency Monitor",
   width = 1000,
   height = 650,
+  permissions = { "local_network", "accessibility" },
   on_init = function()
     test_init_called = true
   end,
@@ -420,6 +439,9 @@ local app_instance = framework.App {
 
 assert(test_init_called == true, "framework.App on_init callback must be called")
 assert(app_instance ~= nil, "framework.App must return the active view instance")
+assert(framework.declared_permissions ~= nil and framework.declared_permissions["local_network"] ~= nil, "framework.declared_permissions must include local_network")
+assert(framework.declared_permissions["accessibility"] ~= nil, "framework.declared_permissions must include accessibility")
+assert(app_instance.permissions ~= nil and app_instance.permissions["local_network"] ~= nil, "view.permissions must include local_network")
 assert(core.root_view.root_node.active_view == app_instance, "framework.App must mount initial_view into root_node")
 if system.get_window_title then
   assert(system.get_window_title():find("Test App"), "framework.App must set system window title")
@@ -431,6 +453,15 @@ renderer.begin_frame()
 core.draw()
 renderer.end_frame()
 assert(app_instance.rendered == true, "Downstream app view draw method must be invoked during frame rendering")
+
+-- Test loading demo_app with permissions integration
+local demo_view = dofile("examples/demo_app/main.lua")
+assert(demo_view ~= nil, "demo_app main.lua must return view instance")
+assert(demo_view.permissions ~= nil and demo_view.permissions["local_network"] ~= nil, "demo_app must have local_network permission declared")
+assert(demo_view.banner ~= nil, "demo_app must initialize permission banner")
+renderer.begin_frame()
+core.draw()
+renderer.end_frame()
 
 -- Restore default CanvasView
 core.root_view.root_node.views = { core.canvas_view }

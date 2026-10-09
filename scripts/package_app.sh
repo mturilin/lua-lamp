@@ -237,6 +237,23 @@ EOF
     cp "$REPO_DIR/LuaLamp.icns" "$ICON_FILE"
   fi
 
+  # Install companion netauth helper and dylib for macOS local network permission discovery
+  if [ -f "$REPO_DIR/engine/netauth.m" ]; then
+    echo "Compiling netauth companion helper and dylib..."
+    clang -O2 -framework Foundation -framework Network "$REPO_DIR/engine/netauth.m" -o "$TARGET_APP/Contents/MacOS/netauth"
+    chmod +x "$TARGET_APP/Contents/MacOS/netauth"
+    clang -shared -fPIC -O2 -framework Foundation -framework Network "$REPO_DIR/engine/netauth.m" -o "$TARGET_APP/Contents/Resources/libnetauth.dylib"
+  elif [ -f "$REPO_DIR/bin/netauth" ]; then
+    cp "$REPO_DIR/bin/netauth" "$TARGET_APP/Contents/MacOS/netauth"
+    chmod +x "$TARGET_APP/Contents/MacOS/netauth"
+  fi
+
+  # Privacy usage descriptions
+  LOCAL_NET_DESC="$(read_json_field "localNetworkUsageDescription" "$DISPLAY_NAME requires local network access to discover devices, measure latency, and diagnose network connectivity.")"
+  CAMERA_DESC="$(read_json_field "cameraUsageDescription" "$DISPLAY_NAME requires camera access for video features.")"
+  MIC_DESC="$(read_json_field "microphoneUsageDescription" "$DISPLAY_NAME requires microphone access for audio recording.")"
+  APPLEVENTS_DESC="$(read_json_field "appleEventsUsageDescription" "$DISPLAY_NAME requires AppleEvents access to automate tasks.")"
+
   # Generate Info.plist
   cat << EOF > "$TARGET_APP/Contents/Info.plist"
 <?xml version="1.0" encoding="UTF-8"?>
@@ -265,6 +282,19 @@ EOF
 	<true/>
 	<key>NSHumanReadableCopyright</key>
 	<string>© $(date +%Y) $APP_NAME</string>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>$LOCAL_NET_DESC</string>
+	<key>NSBonjourServices</key>
+	<array>
+		<string>_http._tcp</string>
+		<string>_bonjour._tcp</string>
+	</array>
+	<key>NSCameraUsageDescription</key>
+	<string>$CAMERA_DESC</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>$MIC_DESC</string>
+	<key>NSAppleEventsUsageDescription</key>
+	<string>$APPLEVENTS_DESC</string>
 </dict>
 </plist>
 EOF

@@ -205,6 +205,16 @@ function core.init()
   -- Initialize Unified Menu System (Native NSMenu on macOS, In-Window bar on Linux)
   menu.init_defaults()
 
+  -- Auto-register native macOS permissions tab in Settings dialog
+  if PLATFORM == "Mac OS X" then
+    pcall(function()
+      local permissions = require "src.permissions"
+      if permissions and permissions.register_settings_tab then
+        permissions.register_settings_tab()
+      end
+    end)
+  end
+
   -- Check for external downstream application project
   local app_dir = os.getenv("LUALAMP_APP_DIR")
   if not app_dir and rawget(_G, "MACOS_RESOURCES") and system.get_file_info(MACOS_RESOURCES .. "/app") then
@@ -236,6 +246,15 @@ function core.init()
         if ww and wh then
           manifest.window = { width = tonumber(ww), height = tonumber(wh) }
         end
+        local perms_str = content:match('"permissions"%s*:%s*%[([^%]]*)%]')
+        if perms_str then
+          manifest.permissions = {}
+          for p in perms_str:gmatch('"([^"]+)"') do
+            table.insert(manifest.permissions, p)
+          end
+        end
+
+        core.manifest = manifest
 
         if manifest then
           if manifest.displayName or manifest.name then
@@ -247,6 +266,14 @@ function core.init()
           end
           if manifest.entry then
             entry_file = app_dir .. "/" .. manifest.entry
+          end
+          if manifest.permissions and #manifest.permissions > 0 and PLATFORM == "Mac OS X" then
+            pcall(function()
+              local permissions = require "src.permissions"
+              for _, perm_type in ipairs(manifest.permissions) do
+                permissions.request(perm_type, { auto_request = true })
+              end
+            end)
           end
         end
       end
