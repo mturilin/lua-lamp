@@ -548,6 +548,9 @@ end
 -- 7. UI Component 2: Dedicated "Permissions" Tab in Settings Dialog
 --------------------------------------------------------------------------------
 
+local ScrollView = require "src.scroll_view"
+permissions.scroll_view = ScrollView()
+
 --- Register the native Permissions tab inside framework.Settings
 function permissions.register_settings_tab()
   if not permissions.is_macos() then return end
@@ -556,11 +559,10 @@ function permissions.register_settings_tab()
   local function render_permissions_tab(panel_x, panel_y, panel_w, panel_h, s, c, dialog)
     local font_head = style.font_heading or style.font_normal
     local font_title = style.font_bold or style.font_normal
-    local font_body = style.font_normal
     local font_small = style.font_small or style.font_normal
     local font_icon = style.font_icon or style.font_normal
 
-    -- 1. Section Header & Subtitle
+    -- 1. Section Header & Subtitle (Fixed at Top)
     local head_text = "System Permissions & Privacy"
     local head_y = panel_y + math.floor(1.2 * s)
     renderer.draw_text(font_head, head_text, panel_x, head_y, c.text)
@@ -572,21 +574,39 @@ function permissions.register_settings_tab()
       sub_y = sub_y + font_small:get_height() + math.floor(2 * s)
     end
 
-    -- 2. Card List of Permissions
-    local card_y = sub_y + math.floor(16 * s)
+    -- 2. Fixed Bottom Refresh Bar
+    local refresh_btn_w = math.floor(130 * s)
+    local refresh_btn_h = math.floor(30 * s)
+    local refresh_btn_y = panel_y + panel_h - refresh_btn_h
+    local mx = dialog.mouse_x or -1
+    local my = dialog.mouse_y or -1
+    local is_ref_hover = ui.point_in_rect(mx, my, panel_x, refresh_btn_y, refresh_btn_w, refresh_btn_h)
+
+    ui.draw_button(font_small, "Refresh Status", panel_x, refresh_btn_y, refresh_btn_w, refresh_btn_h, {
+      variant = "surface",
+      is_hover = is_ref_hover,
+      icon = icons.refresh or nil,
+    })
+
+    -- 3. Scrollable Middle Viewport for Cards
     local card_h = math.floor(52 * s)
     local card_gap = math.floor(8 * s)
     local card_r = math.floor(8 * s)
+    local scroll_top = sub_y + math.floor(10 * s)
+    local scroll_h = refresh_btn_y - scroll_top - math.floor(10 * s)
+    local total_cards_h = #permissions.ORDER * (card_h + card_gap)
 
-    local mx = dialog.mouse_x or -1
-    local my = dialog.mouse_y or -1
+    local _, content_origin_y = permissions.scroll_view:begin_clip(panel_x, scroll_top, panel_w, scroll_h, total_cards_h)
+
+    local card_y = content_origin_y
 
     for _, perm_type in ipairs(permissions.ORDER) do
       local meta = permissions.get_metadata(perm_type)
       local st = permissions.get_status(perm_type)
       local is_granted = (st == permissions.STATUS.GRANTED)
 
-      local is_hover = ui.point_in_rect(mx, my, panel_x, card_y, panel_w, card_h)
+      -- Only highlight hover if mouse is inside the scrollable viewport
+      local is_hover = permissions.scroll_view:is_in_viewport(mx, my) and ui.point_in_rect(mx, my, panel_x, card_y, panel_w, card_h)
       local card_bg = is_hover and c.surface_hover or c.surface
 
       -- Card Background (Rule 2: Borderless Surface)
@@ -606,6 +626,12 @@ function permissions.register_settings_tab()
       local icon_col = is_granted and { 16, 185, 129, 255 } or c.accent
       renderer.draw_text(font_icon, icon_char, icon_x, icon_y, icon_col)
 
+      -- Right Status Badge or Action Button Geometry
+      local btn_w = math.floor(104 * s)
+      local btn_h = math.floor(28 * s)
+      local btn_x = panel_x + panel_w - btn_w - math.floor(14 * s)
+      local btn_y = card_y + math.floor((card_h - btn_h) / 2)
+
       -- Center Information (Title & Description)
       local text_x = icon_box_x + icon_box_size + math.floor(12 * s)
       local title_y = card_y + math.floor(9 * s) + math.floor(1.2 * s)
@@ -613,7 +639,7 @@ function permissions.register_settings_tab()
 
       local desc_y = title_y + font_title:get_height() + math.floor(2 * s)
       local desc_str = meta.description
-      local avail_text_w = panel_w - (text_x - panel_x) - math.floor(120 * s)
+      local avail_text_w = btn_x - text_x - math.floor(16 * s)
       if font_small:get_width(desc_str) > avail_text_w then
         while #desc_str > 5 and font_small:get_width(desc_str .. "...") > avail_text_w do
           desc_str = desc_str:sub(1, -2)
@@ -622,21 +648,16 @@ function permissions.register_settings_tab()
       end
       renderer.draw_text(font_small, desc_str, text_x, desc_y, c.text_muted)
 
-      -- Right Status Badge or Action Button
-      local btn_w = math.floor(104 * s)
-      local btn_h = math.floor(28 * s)
-      local btn_x = panel_x + panel_w - btn_w - math.floor(12 * s)
-      local btn_y = card_y + math.floor((card_h - btn_h) / 2)
-
       if is_granted then
         -- Solid Pill Badge (Rule 2: Pinglet Button Standard)
         local badge_r = math.floor(btn_h / 2)
         ui.draw_rounded_rect(btn_x, btn_y, btn_w, btn_h, badge_r, { 16, 185, 129, 32 })
         local check_char = icons.check or "✓"
         local label_text = "Granted"
-        local cw = font_small:get_width(check_char)
+        -- Measure icon with font_icon (Rule 3: Decoupled Icon and Text Measurement)
+        local cw = font_icon:get_width(check_char)
         local lw = font_small:get_width(label_text)
-        local gap = math.floor(6 * s)
+        local gap = math.floor(8 * s)
         local total_w = cw + gap + lw
         local cx = btn_x + math.floor((btn_w - total_w) / 2)
         local cy = btn_y + math.floor((btn_h - font_icon:get_height()) / 2) + math.floor(1.0 * s)
@@ -646,7 +667,7 @@ function permissions.register_settings_tab()
         renderer.draw_text(font_small, label_text, cx + cw + gap, ty, green_col)
       else
         -- Interactive Button (Pinglet Button Standard: Tinted pill)
-        local btn_hover = ui.point_in_rect(mx, my, btn_x, btn_y, btn_w, btn_h)
+        local btn_hover = permissions.scroll_view:is_in_viewport(mx, my) and ui.point_in_rect(mx, my, btn_x, btn_y, btn_w, btn_h)
         ui.draw_button(font_small, "Open Settings", btn_x, btn_y, btn_w, btn_h, {
           variant = "tinted",
           accent_theme = (st == permissions.STATUS.DENIED) and "amber" or "cyan",
@@ -658,31 +679,41 @@ function permissions.register_settings_tab()
       card_y = card_y + card_h + card_gap
     end
 
-    -- 3. Bottom Refresh Bar
-    local refresh_btn_w = math.floor(130 * s)
-    local refresh_btn_h = math.floor(30 * s)
-    local refresh_btn_y = panel_y + panel_h - refresh_btn_h - math.floor(8 * s)
-    local is_ref_hover = ui.point_in_rect(mx, my, panel_x, refresh_btn_y, refresh_btn_w, refresh_btn_h)
-
-    ui.draw_button(font_small, "Refresh Status", panel_x, refresh_btn_y, refresh_btn_w, refresh_btn_h, {
-      variant = "surface",
-      is_hover = is_ref_hover,
-      icon = icons.refresh or nil,
-    })
+    -- Complete clipping and draw smooth macOS scrollbar
+    permissions.scroll_view:end_clip()
   end
 
   local function handle_permissions_click(px, py, panel_x, panel_y, panel_w, panel_h, dialog)
     local s = style.scale or 1.0
 
-    -- Header and Subtitle height offset
+    -- 1. Check click on fixed "Refresh Status" button
+    local refresh_btn_w = math.floor(130 * s)
+    local refresh_btn_h = math.floor(30 * s)
+    local refresh_btn_y = panel_y + panel_h - refresh_btn_h
+    if ui.point_in_rect(px, py, panel_x, refresh_btn_y, refresh_btn_w, refresh_btn_h) then
+      permissions.invalidate_cache()
+      if core then core.redraw = true end
+      return true
+    end
+
+    -- 2. Header and Subtitle height offset
     local font_head = style.font_heading or style.font_normal
     local font_small = style.font_small or style.font_normal
     local head_y = panel_y + math.floor(1.2 * s)
     local sub_y = head_y + font_head:get_height() + math.floor(6 * s)
     local sub_lines = ui.wrap_text(font_small, "Manage macOS security authorizations and hardware access required for application diagnostics and features.", panel_w)
-    local card_y = sub_y + (#sub_lines * (font_small:get_height() + math.floor(2 * s))) + math.floor(16 * s)
+    local scroll_top = sub_y + (#sub_lines * (font_small:get_height() + math.floor(2 * s))) + math.floor(10 * s)
+    local scroll_h = refresh_btn_y - scroll_top - math.floor(10 * s)
+
+    -- Ignore clicks outside visible scrollable viewport
+    if not ui.point_in_rect(px, py, panel_x, scroll_top, panel_w, scroll_h) then
+      return false
+    end
+
     local card_h = math.floor(52 * s)
     local card_gap = math.floor(8 * s)
+    local content_py = permissions.scroll_view:to_content_y(py)
+    local card_y = scroll_top
 
     -- Check click on each permission card's action button
     for _, perm_type in ipairs(permissions.ORDER) do
@@ -690,25 +721,15 @@ function permissions.register_settings_tab()
       if st ~= permissions.STATUS.GRANTED then
         local btn_w = math.floor(104 * s)
         local btn_h = math.floor(28 * s)
-        local btn_x = panel_x + panel_w - btn_w - math.floor(12 * s)
+        local btn_x = panel_x + panel_w - btn_w - math.floor(14 * s)
         local btn_y = card_y + math.floor((card_h - btn_h) / 2)
 
-        if ui.point_in_rect(px, py, btn_x, btn_y, btn_w, btn_h) then
+        if ui.point_in_rect(px, content_py, btn_x, btn_y, btn_w, btn_h) then
           permissions.open_settings(perm_type)
           return true
         end
       end
       card_y = card_y + card_h + card_gap
-    end
-
-    -- Check click on "Refresh Status" button
-    local refresh_btn_w = math.floor(130 * s)
-    local refresh_btn_h = math.floor(30 * s)
-    local refresh_btn_y = panel_y + panel_h - refresh_btn_h - math.floor(8 * s)
-    if ui.point_in_rect(px, py, panel_x, refresh_btn_y, refresh_btn_w, refresh_btn_h) then
-      permissions.invalidate_cache()
-      if core then core.redraw = true end
-      return true
     end
 
     return false

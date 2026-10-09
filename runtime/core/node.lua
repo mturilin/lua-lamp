@@ -22,6 +22,7 @@ function Node:new(type)
   end
   self.hovered = {x = -1, y = -1 }
   self.hovered_close = 0
+  self.hovered_scroll_button = 0
   self.tab_shift = 0
   self.tab_offset = 1
   self.tab_width = style.tab_width

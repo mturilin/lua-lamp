@@ -1,6 +1,7 @@
 -- Lua Lamp UI Helper Functions & Vector Drawing Primitives
 -- Provides reusable drawing components on top of the SDL3 renderer.
 
+local style = require "src.style"
 local ui = {}
 
 --- Check if point (px, py) is inside rectangle (rx, ry, rw, rh)
@@ -391,6 +392,200 @@ function ui.draw_button(text_font, label, x, y, w, h, opts)
     ui.draw_centered_icon_and_text(ifont, opts.icon, text_font, label, x, y, w, h, icon_col, text_col, opts.gap or math.floor(7 * s))
   else
     ui.draw_centered_text(text_font, label, x, y, w, h, text_col)
+  end
+
+  return x, y, w, h
+end
+
+--- Draw interactive horizontal Slider
+---@param x number
+---@param y number
+---@param w number
+---@param h number
+---@param value number 0.0 to 1.0
+---@param opts { accent_theme: string?, is_hover: boolean?, is_dragging: boolean?, label: string? }?
+function ui.draw_slider(x, y, w, h, value, opts)
+  opts = opts or {}
+  local s = style.scale or 1.0
+  local c = style.colors
+
+  value = math.max(0, math.min(1.0, value or 0))
+
+  local track_h = math.floor(6 * s)
+  local track_y = y + math.floor((h - track_h) / 2)
+  local track_r = math.floor(track_h / 2)
+
+  -- 1. Recessed track background
+  ui.draw_rounded_box(x, track_y, w, track_h, track_r, c.track_bg or { 15, 23, 42, 180 }, nil, 0)
+
+  -- 2. Filled active portion
+  local fill_w = math.floor(w * value)
+  if fill_w > track_h then
+    local fill_col = (opts.accent_theme == "amber") and c.lamp_gold or (c.btn_accent_bg or { 56, 189, 248, 255 })
+    ui.draw_rounded_box(x, track_y, fill_w, track_h, track_r, fill_col, nil, 0)
+  end
+
+  -- 3. Draggable circular thumb
+  local thumb_r = math.floor((opts.is_dragging or opts.is_hover) and (10 * s) or (8 * s))
+  local thumb_cx = x + math.floor(value * w)
+  local thumb_cy = y + math.floor(h / 2)
+
+  -- Thumb glow
+  if opts.is_hover or opts.is_dragging then
+    ui.draw_circle(thumb_cx, thumb_cy, thumb_r + math.floor(4 * s), { 56, 189, 248, 50 })
+  end
+
+  -- Thumb body
+  ui.draw_circle(thumb_cx, thumb_cy, thumb_r, { 255, 255, 255, 255 })
+  ui.draw_circle(thumb_cx, thumb_cy, math.floor(thumb_r / 2), (opts.accent_theme == "amber") and c.lamp_gold or { 56, 189, 248, 255 })
+
+  return x, y, w, h
+end
+
+--- Draw interactive Toggle Switch
+---@param x number
+---@param y number
+---@param w number
+---@param h number
+---@param active boolean
+---@param opts { accent_theme: string?, is_hover: boolean? }?
+function ui.draw_toggle(x, y, w, h, active, opts)
+  opts = opts or {}
+  local s = style.scale or 1.0
+  local c = style.colors
+
+  local r = math.floor(h / 2)
+  local bg_col
+  if active then
+    bg_col = (opts.accent_theme == "emerald") and { 16, 185, 129, 255 } or (c.btn_accent_bg or { 56, 189, 248, 255 })
+  else
+    bg_col = opts.is_hover and { 255, 255, 255, 38 } or { 255, 255, 255, 22 }
+  end
+
+  -- Track capsule
+  ui.draw_rounded_box(x, y, w, h, r, bg_col, nil, 0)
+
+  -- Sliding circular thumb
+  local thumb_pad = math.floor(3 * s)
+  local thumb_d = h - thumb_pad * 2
+  local thumb_r = math.floor(thumb_d / 2)
+  local thumb_cx = active and (x + w - thumb_pad - thumb_r) or (x + thumb_pad + thumb_r)
+  local thumb_cy = y + math.floor(h / 2)
+
+  ui.draw_circle(thumb_cx, thumb_cy, thumb_r, { 255, 255, 255, 255 })
+
+  return x, y, w, h
+end
+
+--- Draw interactive CheckBox with label
+---@param font any
+---@param x number
+---@param y number
+---@param size number
+---@param checked boolean
+---@param label string?
+---@param opts { is_hover: boolean? }?
+function ui.draw_checkbox(font, x, y, size, checked, label, opts)
+  opts = opts or {}
+  local s = style.scale or 1.0
+  local c = style.colors
+  local icons = require "src.icons"
+
+  local r = math.floor(4 * s)
+  local box_bg
+  local check_col = { 255, 255, 255, 255 }
+
+  if checked then
+    box_bg = c.btn_accent_bg or { 56, 189, 248, 255 }
+    check_col = { 15, 23, 42, 255 } -- Dark checkmark on active pill
+    ui.draw_rounded_box(x, y, size, size, r, box_bg, nil, 0)
+    local check_icon = icons.check or "✓"
+    local font_icon = style.font_icon or font
+    local iw = font_icon:get_width(check_icon)
+    local ix = x + math.floor((size - iw) / 2)
+    local iy = y + math.floor((size - font_icon:get_height()) / 2) + math.floor(1.0 * s)
+    renderer.draw_text(font_icon, check_icon, ix, iy, check_col)
+  else
+    box_bg = opts.is_hover and { 255, 255, 255, 20 } or { 255, 255, 255, 10 }
+    local border_col = opts.is_hover and { 255, 255, 255, 80 } or { 255, 255, 255, 40 }
+    ui.draw_rounded_box(x, y, size, size, r, box_bg, border_col, 1)
+  end
+
+  local total_w = size
+  if label and label ~= "" then
+    local lx = x + size + math.floor(8 * s)
+    local ly = y + math.floor((size - font:get_height()) / 2) + math.floor(1.2 * s)
+    renderer.draw_text(font, label, lx, ly, opts.is_hover and c.text_primary or c.text_secondary)
+    total_w = total_w + math.floor(8 * s) + font:get_width(label)
+  end
+
+  return x, y, total_w, size
+end
+
+--- Draw interactive Progress Bar
+---@param x number
+---@param y number
+---@param w number
+---@param h number
+---@param progress number 0.0 to 1.0
+---@param opts { accent_theme: string?, show_label: boolean? }?
+function ui.draw_progressbar(x, y, w, h, progress, opts)
+  opts = opts or {}
+  local s = style.scale or 1.0
+  local c = style.colors
+
+  progress = math.max(0, math.min(1.0, progress or 0))
+  local r = math.floor(h / 2)
+
+  -- Recessed track
+  ui.draw_rounded_box(x, y, w, h, r, c.track_bg or { 15, 23, 42, 180 }, nil, 0)
+
+  -- Fill
+  local fill_w = math.floor(w * progress)
+  if fill_w > r then
+    local fill_col = (opts.accent_theme == "emerald") and { 16, 185, 129, 255 } or (c.btn_accent_bg or { 56, 189, 248, 255 })
+    ui.draw_rounded_box(x, y, fill_w, h, r, fill_col, nil, 0)
+  end
+
+  return x, y, w, h
+end
+
+--- Draw interactive Text Input Box
+---@param font any
+---@param x number
+---@param y number
+---@param w number
+---@param h number
+---@param text string
+---@param is_focused boolean
+---@param opts { placeholder: string?, is_hover: boolean? }?
+function ui.draw_input_box(font, x, y, w, h, text, is_focused, opts)
+  opts = opts or {}
+  local s = style.scale or 1.0
+  local c = style.colors
+
+  local r = math.floor(6 * s)
+  local bg_col = opts.is_hover and { 255, 255, 255, 18 } or { 255, 255, 255, 12 }
+  local border_col = is_focused and (c.btn_accent_bg or { 56, 189, 248, 255 }) or (opts.is_hover and { 255, 255, 255, 45 } or { 255, 255, 255, 25 })
+
+  ui.draw_rounded_box(x, y, w, h, r, bg_col, border_col, is_focused and 2 or 1)
+
+  local pad_x = math.floor(12 * s)
+  local ty = y + math.floor((h - font:get_height()) / 2) + math.floor(1.2 * s)
+
+  if text and text ~= "" then
+    renderer.draw_text(font, text, x + pad_x, ty, c.text_primary)
+    if is_focused then
+      local tw = font:get_width(text)
+      local cx = x + pad_x + tw + 1
+      renderer.draw_rect(cx, ty - 1, 2, font:get_height() + 2, c.text_primary)
+    end
+  else
+    local placeholder = opts.placeholder or "Type here..."
+    renderer.draw_text(font, placeholder, x + pad_x, ty, c.text_tertiary)
+    if is_focused then
+      renderer.draw_rect(x + pad_x, ty - 1, 2, font:get_height() + 2, c.text_primary)
+    end
   end
 
   return x, y, w, h

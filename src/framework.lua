@@ -24,6 +24,7 @@ framework.Menu = require "src.menu"
 framework.Permissions = require "src.permissions"
 framework.Settings = require "src.settings_dialog"
 framework.Canvas = require "src.canvas"
+framework.ScrollView = require "src.scroll_view"
 
 -- 4. Lite XL UI Layer Widgets (Retained Mode Component Tree)
 framework.Widget      = require "widget"

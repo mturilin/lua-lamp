@@ -470,6 +470,66 @@ core.active_view = core.canvas_view
 
 print("[PASS] Universal Downstream Application SDK, framework.App, & View Mounting verified.")
 
+-- 14. Test ScrollView Component, Vector UI Primitives & Interactive Gallery
+local ScrollView = framework.ScrollView
+assert(ScrollView ~= nil, "framework.ScrollView must be exported")
+
+local sv = ScrollView({ scroll_speed = 40 })
+sv:set_viewport(50, 50, 400, 300)
+sv:set_content_size(400, 800)
+assert(sv.content_h == 800, "ScrollView content_h should be set")
+assert(sv.viewport_h == 300, "ScrollView viewport_h should be set")
+
+-- Test mousewheel scrolling
+sv.last_mouse_x = 100
+sv.last_mouse_y = 100
+local scrolled = sv:on_mouse_wheel(-2, 0)
+assert(scrolled == true, "ScrollView should capture mousewheel inside viewport")
+assert(sv.scroll_to_y > 0, "ScrollView target scroll should advance")
+sv:update()
+assert(sv.scroll_y > 0, "ScrollView smooth interpolation should update scroll_y")
+local content_y = sv:to_content_y(150)
+assert(content_y == 150 + math.floor(sv.scroll_y), "to_content_y should accurately transform coordinates")
+
+-- Test ScrollView scissor clipping and scrollbar overlay
+renderer.begin_frame()
+local ox, oy = sv:begin_clip(50, 50, 400, 300, 800)
+assert(ox == 50 and oy <= 50, "begin_clip should offset drawing origin")
+sv:end_clip()
+
+-- Test Vector UI Component Primitives (Slider, Toggle, Checkbox, ProgressBar, InputBox)
+ui.draw_slider(50, 50, 200, 24, 0.65, { accent_theme = "cyan" })
+ui.draw_toggle(50, 80, 44, 24, true, { accent_theme = "emerald" })
+ui.draw_checkbox(style.font_normal, 50, 110, 18, true, "Verified Checkbox")
+ui.draw_progressbar(50, 140, 200, 10, 0.75, { accent_theme = "cyan" })
+ui.draw_input_box(style.font_normal, 50, 160, 220, 32, "Input Text", true)
+renderer.end_frame()
+
+-- Test Verified Tabler Icons Font Codepoint Mapping
+assert(icons.shield == "\xee\xac\xa4", "Verified Tabler icon: shield (U+EB24)")
+assert(icons.shield_check == "\xee\xac\xa2", "Verified Tabler icon: shield_check (U+EB22)")
+assert(icons.camera == "\xee\xa9\x94", "Verified Tabler icon: camera (U+EA54)")
+assert(icons.microphone == "\xee\xab\xb0", "Verified Tabler icon: microphone (U+EAF0)")
+assert(icons.folder == "\xee\xaa\xad", "Verified Tabler icon: folder (U+EAAD)")
+assert(icons.accessible == "\xee\xae\xa9", "Verified Tabler icon: accessible (U+EBA9)")
+assert(icons.external_link == "\xee\xaa\x99", "Verified Tabler icon: external_link (U+EA99)")
+
+-- Test Framework Component Gallery Engine
+local gallery = require "src.gallery"
+assert(gallery ~= nil, "src.gallery module should load")
+assert(#gallery.TABS >= 7, "Gallery should define all component categories")
+
+renderer.begin_frame()
+gallery:draw(1000, 650)
+renderer.end_frame()
+
+gallery:on_mouse_moved(150, 150)
+gallery:on_mouse_wheel(1, 0)
+gallery:on_mouse_pressed("left", 150, 150)
+gallery:on_mouse_released("left", 150, 150)
+
+print("[PASS] ScrollView Component, Vector UI Primitives, Verified Icons & Component Gallery verified.")
+
 print("\n========================================")
 print("ALL LUA LAMP VERIFICATION TESTS PASSED!")
 print("========================================")

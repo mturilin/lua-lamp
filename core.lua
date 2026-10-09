@@ -369,6 +369,11 @@ function core.on_event(type, a, b, c, d)
         core.redraw = true
         return
       end
+    elseif type == "mousewheel" then
+      if settings:on_mouse_wheel(a, b) then
+        core.redraw = true
+        return
+      end
     elseif type == "keypressed" then
       local key = a:lower()
       if key == "escape" then

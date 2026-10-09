@@ -171,6 +171,22 @@ It serves dual purposes:
 - **Zero-Dependency End-User Distribution**:
   - Packaged applications require zero external dependencies: end users do not need Lua, SDL, or Homebrew installed.
 
+### Invariant 14: ScrollView Container & Component Gallery Testbed
+- **First-Class Reusable `ScrollView` (`framework.ScrollView` / `src/scroll_view.lua`)**:
+  - Provides a lightweight, high-performance scrollable container conforming to the architecture of Flutter (`SingleChildScrollView`) and Avalonia (`ScrollViewer`).
+  - **Scissor Viewport Clipping**: Wraps child drawing between `sv:begin_clip(x, y, w, h, content_h)` and `sv:end_clip()` using `renderer.set_clip_rect` and returning a translated local origin `(x, y - scroll_y)`.
+  - **Smooth 60 FPS Damping Interpolation**: Scrolling follows exponential damping (`scroll_y = scroll_y + (scroll_to_y - scroll_y) * 0.32`) on frame updates.
+  - **macOS-Style Capsule Scrollbar**: Renders an overlay rounded scrollbar thumb with dynamic width expansion on hover/drag (from 4px to 7px), proportional track height mapping, and idle auto-fade (`fade_alpha`).
+  - **Coordinate Translation**: Provides `sv:to_content_y(py)` and `sv:is_in_viewport(px, py)` to map mouse and click coordinates accurately into scrollable content spaces regardless of scroll offset.
+  - **Modal Integration**: Utilized in the Settings "Permissions" dialog tab with sticky header and sticky "Refresh Status" footer to eliminate card overflow and guarantee full click accessibility.
+- **Component Showcase & Gallery Testbed (`src/gallery.lua`)**:
+  - Primary default view mounted in `CanvasView` serving as a comprehensive live testbed and showcase of all framework controls.
+  - Features dual-mode switching via top-bar segmented pill (`Gallery` vs `Canvas` classic lamp stage card).
+  - Categorized sidebar: Buttons & Badges, Sliders & Progress, Toggles & Checkboxes, Text Inputs, Scrollable Panels, Banners & Modals, Iconography & Font Glyphs, All Components.
+  - Live interactive controls: draggable sliders (`ui.draw_slider`), macOS/iOS animated toggles (`ui.draw_toggle`), accent checkboxes (`ui.draw_checkbox`), progress bars (`ui.draw_progressbar`), interactive text input with focus ring and cursor (`ui.draw_input_box`), nested scroll views, and privacy warning banners.
+- **Verified Tabler Icon Font Mapping (`src/icons.lua`)**:
+  - All icon constants map directly to exact UTF-8 byte sequences verified against native FreeType cmap in `fonts/tabler-icons.ttf` (`shield`, `shield_check`, `camera`, `microphone`, `folder`, `accessible`, `external_link`, `video`, `layout`, `box`, `list`, `adjustments`, `palette`, `typography`, etc.).
+
 ---
 
 ## 3. Architecture & Directory Blueprint
@@ -217,16 +233,19 @@ lua-lamp/
 │   └── generate_icon.swift     # Procedural macOS .icns and PNG generator
 ├── src/                        # Modular application code
 │   ├── canvas.lua              # Central "Hello World" canvas component
+│   ├── canvas_view.lua         # Dual-mode primary RootView component (Gallery / Canvas)
 │   ├── framework.lua           # Mini-Flutter developer application framework facade
+│   ├── gallery.lua             # Framework component gallery & interactive testbed
 │   ├── icons.lua               # Tabler icon codepoints registry
 │   ├── menu.lua                # Unified menu registry & cross-platform dispatcher
 │   ├── menubar.lua             # In-window borderless menu bar (Linux/Windows)
 │   ├── permissions.lua         # Native macOS permissions & privacy authorization framework
+│   ├── scroll_view.lua         # High-performance scrollable container with scissor clipping
 │   ├── settings_dialog.lua     # Extensible floating modal settings window
 │   ├── style.lua               # Theme management (dark/light) & font loader
 │   └── ui.lua                  # Reusable drawing primitives & UI components
 ├── tests/
-│   └── test_lualamp.lua        # Headless automated verification suite (Stages 1-12)
+│   └── test_lualamp.lua        # Headless automated verification suite (Stages 1-14)
 ├── Dockerfile                  # Containerized Linux build environment
 ├── LICENSE                     # MIT Open Source License
 ├── README.md                   # User documentation and guide

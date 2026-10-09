@@ -371,6 +371,46 @@ banner:draw(x, y, w, 36 * SCALE)
 
 > **Note**: On macOS, a live **Permissions** tab is automatically registered in the Settings dialog (<kbd>Cmd+,</kbd>). When packaging downstream applications via `./bin/lualamp build <dir>` or `package_app.sh`, the `netauth` companion helper, `libnetauth.dylib`, and standard Privacy Usage descriptions (`NSLocalNetworkUsageDescription`, `NSBonjourServices`, etc.) are automatically compiled and injected into the target application bundle.
 
+#### Example 6: Reusable Scrollable Containers (`framework.ScrollView`)
+```lua
+local framework = require "src.framework"
+local ScrollView = framework.ScrollView
+
+-- 1. Instantiate a scroll container with custom scroll speed
+local my_scroll = ScrollView({ scroll_speed = 36 })
+
+-- 2. Inside your custom View's draw method:
+function MyView:draw()
+  local x, y, w, h = 40, 40, 500, 350
+  local content_h = 1200 -- Total height of child content
+
+  -- Begin scissor clipping and retrieve translated draw origin (x, y - scroll_y)
+  local ox, oy = my_scroll:begin_clip(x, y, w, h, content_h)
+
+  -- Render children at translated coordinates
+  for i = 1, 20 do
+    local item_y = oy + (i - 1) * 55
+    framework.draw_rounded_box(ox + 10, item_y, w - 30, 48, 8, { 255, 255, 255, 12 })
+  end
+
+  -- End clipping and render native macOS rounded capsule scrollbar thumb
+  my_scroll:end_clip()
+end
+
+-- 3. Forward mousewheel and mouse events:
+function MyView:on_mouse_wheel(dy, dx)
+  return my_scroll:on_mouse_wheel(dy, dx)
+end
+function MyView:on_mouse_moved(px, py)
+  return my_scroll:on_mouse_moved(px, py)
+end
+function MyView:on_mouse_pressed(button, px, py)
+  return my_scroll:on_mouse_pressed(button, px, py)
+end
+function MyView:on_mouse_released(button, px, py)
+  return my_scroll:on_mouse_released(button, px, py)
+end
+```
 
 ---
 
@@ -401,11 +441,14 @@ lua-lamp/
 │   └── globals.lua             # Global table helpers
 ├── src/
 │   ├── canvas.lua              # Main "Hello World" canvas component
+│   ├── canvas_view.lua         # Dual-mode primary RootView component (Gallery / Canvas)
 │   ├── framework.lua           # Mini-Flutter developer application framework facade
+│   ├── gallery.lua             # Framework component gallery & interactive testbed
 │   ├── icons.lua               # Tabler Icons codepoints registry
 │   ├── menu.lua                # Unified menu registry & cross-platform dispatcher
 │   ├── menubar.lua             # In-window borderless menu bar (Linux/Windows)
 │   ├── permissions.lua         # Native macOS permissions & privacy authorization framework
+│   ├── scroll_view.lua         # High-performance scrollable container with scissor clipping
 │   ├── settings_dialog.lua     # Extensible floating modal settings window
 │   ├── style.lua               # Theme & font management
 │   └── ui.lua                  # Vector drawing primitives & UI components

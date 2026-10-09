@@ -123,6 +123,11 @@ function settings:on_mouse_moved(px, py)
     tab_y = tab_y + tab_h + tab_gap
   end
 
+  local ok, permissions = pcall(require, "src.permissions")
+  if ok and permissions and permissions.scroll_view then
+    permissions.scroll_view:on_mouse_moved(px, py)
+  end
+
   local core = require "core"
   core.redraw = true
 
@@ -194,6 +199,14 @@ function settings:on_mouse_pressed(button, px, py)
   local panel_w = self.w - math.floor(206 * s)
   local panel_h = self.h - math.floor(106 * s)
 
+  -- Check scrollbar thumb interaction in custom sections
+  local ok, permissions = pcall(require, "src.permissions")
+  if ok and permissions and permissions.scroll_view then
+    if permissions.scroll_view:on_mouse_pressed(button, px, py) then
+      return true
+    end
+  end
+
   if self.active_tab == "display" then
     self:handle_display_click(px, py, panel_x, panel_y, panel_w, panel_h)
   elseif self.active_tab == "typography" then
@@ -214,10 +227,28 @@ end
 
 function settings:on_mouse_released(button, px, py)
   if not self.visible then return false end
+  local ok, permissions = pcall(require, "src.permissions")
+  if ok and permissions and permissions.scroll_view then
+    permissions.scroll_view:on_mouse_released(button, px, py)
+  end
+
   if self.dragging then
     self.dragging = false
     local core = require "core"
     core.redraw = true
+  end
+  return true
+end
+
+function settings:on_mouse_wheel(dy, dx)
+  if not self.visible then return false end
+  local ok, permissions = pcall(require, "src.permissions")
+  if ok and permissions and permissions.scroll_view then
+    if permissions.scroll_view:on_mouse_wheel(dy, dx) then
+      local core = require "core"
+      if core then core.redraw = true end
+      return true
+    end
   end
   return true
 end
@@ -378,8 +409,8 @@ function settings:draw(win_w, win_h)
   renderer.draw_rect(0, 0, win_w, win_h, { 0, 0, 0, 115 })
 
   -- 2. Dialog Dimensions & Centering
-  self.w = math.min(win_w - math.floor(32 * s), math.floor(660 * s))
-  self.h = math.min(win_h - math.floor(32 * s), math.floor(450 * s))
+  self.w = math.min(win_w - math.floor(32 * s), math.floor(700 * s))
+  self.h = math.min(win_h - math.floor(32 * s), math.floor(520 * s))
 
   if not self.is_custom_pos then
     self.x = math.floor((win_w - self.w) / 2)
