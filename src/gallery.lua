@@ -174,11 +174,11 @@ function gallery:draw(win_w, win_h)
 
   local logo_x = math.floor(18 * s)
   local logo_y = math.floor((nav_h - style.font_heading:get_height()) / 2) + math.floor(1.2 * s)
-  renderer.draw_text(style.font_heading, "Lua Lamp Component Gallery", logo_x, logo_y, c.lamp_gold)
+  renderer.draw_text(style.font_heading, "Lua Lamp Gallery", logo_x, logo_y, c.lamp_gold)
 
-  local sub_x = logo_x + style.font_heading:get_width("Lua Lamp Component Gallery") + math.floor(12 * s)
+  local sub_x = logo_x + style.font_heading:get_width("Lua Lamp Gallery") + math.floor(10 * s)
   local sub_y = math.floor((nav_h - style.font_small:get_height()) / 2) + math.floor(1.2 * s)
-  ui.draw_pill_badge(style.font_small, "Framework v1.0", sub_x, sub_y, c.pill_bg, c.pill_text, 6 * s, 2 * s)
+  ui.draw_pill_badge(style.font_small, "v1.0", sub_x, sub_y, c.pill_bg, c.pill_text, 6 * s, 2 * s)
 
   -- Top Right Action Buttons: Settings Dialog launcher & Theme Toggle
   local tr_btn_w = math.floor(110 * s)
