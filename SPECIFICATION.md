@@ -84,8 +84,11 @@ It serves dual purposes:
 
 ### Invariant 8: Unified Cross-Platform Menu Architecture
 - **macOS Top-of-Screen System Menu**: On macOS, menus MUST be rendered in the native top-of-screen menu bar using AppKit `NSMenu` (`[NSApp mainMenu]`), matching Human Interface Guidelines.
+  - **Single Application Menu at Index 0**: The macOS system Application menu (`[mainMenu itemAtIndex:0]`) is the sole host for application-level actions. The system automatically titles it with the bundle/process name ("Lua Lamp"). Custom application menus MUST NOT add a redundant duplicate "Lua Lamp" menu to `mainMenu`.
+  - **Autoenables & Protocol Validation Contract**: `[mainMenu setAutoenablesItems:NO]` and `[appMenu setAutoenablesItems:NO]` ensure items are never silently grayed out by AppKit's responder-chain heuristics. The C menu target implements `NSMenuItemValidation` and `NSUserInterfaceValidations` (`validateMenuItem:` returning `YES`).
+  - **Application Menu Item Wiring**: Standard items (*About Lua Lamp*, *Settings…* <kbd>Cmd+,</kbd>, *Quit* <kbd>Cmd+Q</kbd>) are explicitly wired to target actions, command representations (`app:open-settings`, `app:about`, `app:quit`), and enabled states.
+  - **Extensible Downstream Menu Merging**: Dynamic menu sync in `f_set_native_menu` recognizes application menu registrations (`"Lua Lamp"`, `"Application"`, `"App"`, process name, or `is_app_menu = true`) and merges new items into the native Application Menu without duplicates.
   - Native menus dispatch commands (`"app:open-settings"`, `"app:about"`, `"canvas:toggle-theme"`, `"app:quit"`) as `"menu"` SDL events into `core.on_event()`.
-  - Includes standard Application menu (*About Lua Lamp*, *Settings...* <kbd>Cmd+,</kbd>, *Services*, *Hide*, *Quit* <kbd>Cmd+Q</kbd>), *View* menu, and *Help* menu.
 - **Linux In-Window Menu Bar**: On non-macOS platforms (Linux, Windows), menus MUST be rendered as an in-window horizontal bar at the top of the canvas via `src/menubar.lua`.
   - Dropdown lists support borderless translucent pills, hover states, subpixel rounded bounds, optical baseline compensation, and shortcut badges.
 - **Menu Registry & Extensibility**: All application scripts can dynamically register categories and menu items via `menu:register(category, items)` and bind actions via `menu:bind(command_id, handler)`.

@@ -97,7 +97,8 @@ function settings:on_mouse_moved(px, py)
   self.hover_close = ui.point_in_rect(px, py, close_btn_x, close_btn_y, close_btn_size, close_btn_size)
 
   -- Check hover footer close button
-  local footer_y = self.y + self.h - math.floor(46 * s)
+  local footer_h = math.floor(46 * s)
+  local footer_y = self.y + self.h - footer_h
   local footer_btn_w = math.floor(84 * s)
   local footer_btn_h = math.floor(30 * s)
   local footer_btn_x = self.x + self.w - footer_btn_w - math.floor(18 * s)

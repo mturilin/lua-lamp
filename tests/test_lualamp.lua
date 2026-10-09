@@ -230,6 +230,25 @@ core.rescale(detected_scale) -- restore
 core.on_event("keypressed", "escape")
 assert(settings.visible == false, "Pressing escape should dismiss Settings dialog")
 
+-- Test Menu Event ("menu", "app:open-settings") from native menu bar
+core.on_event("menu", "app:open-settings")
+assert(settings.visible == true, "core.on_event('menu', 'app:open-settings') should open Settings dialog")
+
+-- Test Settings Dialog mouse interaction (verifies footer_h and hover calculations)
+local mx = settings.x + math.floor(settings.w / 2)
+local my = settings.y + math.floor(settings.h / 2)
+assert(settings:on_mouse_moved(mx, my) == true, "Settings should intercept mouse moves when visible")
+core.on_event("keypressed", "escape")
+assert(settings.visible == false, "Escape should close Settings after interaction")
+
+-- Test Cmd+, keyboard shortcut to toggle Settings dialog
+core.mod_cmd = true
+core.on_event("keypressed", ",")
+core.mod_cmd = false
+assert(settings.visible == true, "Cmd+, shortcut should toggle Settings dialog open")
+core.on_event("keypressed", "escape")
+assert(settings.visible == false, "Escape should close Settings dialog")
+
 -- Test Mini-Flutter Framework Facade & Pinglet Button Highlight Standard
 assert(framework.Widget ~= nil, "framework.Widget should be defined")
 assert(framework.Button ~= nil, "framework.Button should be defined")

@@ -83,8 +83,10 @@ int pop_pending_menu_command(char *buf, size_t buflen) {
   return 1;
 }
 
-@interface LuaLampMenuTarget : NSObject
+@interface LuaLampMenuTarget : NSObject <NSMenuItemValidation, NSUserInterfaceValidations>
 - (void)menuItemClicked:(NSMenuItem *)sender;
+- (BOOL)validateMenuItem:(NSMenuItem *)menuItem;
+- (BOOL)validateUserInterfaceItem:(id<NSValidatedUserInterfaceItem>)item;
 @end
 
 @implementation LuaLampMenuTarget
@@ -93,6 +95,14 @@ int pop_pending_menu_command(char *buf, size_t buflen) {
   if (cmd) {
     push_pending_menu_command([cmd UTF8String]);
   }
+}
+
+- (BOOL)validateMenuItem:(NSMenuItem *)menuItem {
+  return YES;
+}
+
+- (BOOL)validateUserInterfaceItem:(id<NSValidatedUserInterfaceItem>)item {
+  return YES;
 }
 @end
 
@@ -141,83 +151,103 @@ static void parse_shortcut(const char *shortcut_str, NSString **outKey, NSEventM
 void setup_default_macos_menu(void) {
   @autoreleasepool {
     NSMenu *mainMenu = [NSApp mainMenu];
-    if (mainMenu && [mainMenu numberOfItems] > 0) {
-      return;
-    }
     if (!mainMenu) {
       mainMenu = [[NSMenu alloc] initWithTitle:@"MainMenu"];
       [NSApp setMainMenu:mainMenu];
     }
+    [mainMenu setAutoenablesItems:NO];
 
     LuaLampMenuTarget *target = get_menu_target();
 
     // The macOS Application Menu (Item 0)
     // The OS automatically displays CFBundleName / ProcessName ("Lua Lamp") as the title.
-    NSMenuItem *appMenuItem = [[NSMenuItem alloc] initWithTitle:@"" action:nil keyEquivalent:@""];
-    [mainMenu addItem:appMenuItem];
-    NSMenu *appMenu = [[NSMenu alloc] initWithTitle:@"Lua Lamp"];
-    [appMenuItem setSubmenu:appMenu];
+    NSMenuItem *appMenuItem = nil;
+    NSMenu *appMenu = nil;
 
-    // About Lua Lamp
-    NSMenuItem *aboutItem = [[NSMenuItem alloc] initWithTitle:@"About Lua Lamp"
-                                                       action:@selector(menuItemClicked:)
-                                                keyEquivalent:@""];
-    [aboutItem setTarget:target];
-    [aboutItem setRepresentedObject:@"app:about"];
-    [appMenu addItem:aboutItem];
+    if ([mainMenu numberOfItems] > 0) {
+      appMenuItem = [mainMenu itemAtIndex:0];
+      appMenu = [appMenuItem submenu];
+    } else {
+      appMenuItem = [[NSMenuItem alloc] initWithTitle:@"" action:nil keyEquivalent:@""];
+      [mainMenu addItem:appMenuItem];
+    }
 
-    [appMenu addItem:[NSMenuItem separatorItem]];
+    if (!appMenu) {
+      appMenu = [[NSMenu alloc] initWithTitle:@"Lua Lamp"];
+      [appMenuItem setSubmenu:appMenu];
+    }
+    [appMenu setAutoenablesItems:NO];
 
-    // Settings… (Cmd+,)
-    NSMenuItem *settingsItem = [[NSMenuItem alloc] initWithTitle:@"Settings…"
-                                                          action:@selector(menuItemClicked:)
-                                                   keyEquivalent:@","];
-    [settingsItem setKeyEquivalentModifierMask:NSEventModifierFlagCommand];
-    [settingsItem setTarget:target];
-    [settingsItem setRepresentedObject:@"app:open-settings"];
-    [appMenu addItem:settingsItem];
+    BOOL foundAbout = NO;
+    BOOL foundSettings = NO;
+    BOOL foundQuit = NO;
 
-    [appMenu addItem:[NSMenuItem separatorItem]];
+    for (NSMenuItem *item in [appMenu itemArray]) {
+      NSString *title = [item title];
+      NSString *key = [item keyEquivalent];
+      NSEventModifierFlags mask = [item keyEquivalentModifierMask];
 
-    // Services
-    NSMenuItem *servicesItem = [[NSMenuItem alloc] initWithTitle:@"Services" action:nil keyEquivalent:@""];
-    NSMenu *servicesMenu = [[NSMenu alloc] initWithTitle:@"Services"];
-    [servicesItem setSubmenu:servicesMenu];
-    [appMenu addItem:servicesItem];
-    [NSApp setServicesMenu:servicesMenu];
+      if ([title isEqualToString:@"Settings…"] || [title isEqualToString:@"Preferences…"] ||
+          [title hasPrefix:@"Settings"] || [title hasPrefix:@"Preferences"] ||
+          ([key isEqualToString:@","] && (mask & NSEventModifierFlagCommand))) {
+        [item setTarget:target];
+        [item setAction:@selector(menuItemClicked:)];
+        [item setRepresentedObject:@"app:open-settings"];
+        [item setKeyEquivalent:@","];
+        [item setKeyEquivalentModifierMask:NSEventModifierFlagCommand];
+        [item setEnabled:YES];
+        foundSettings = YES;
+      } else if ([title hasPrefix:@"About "] || [title isEqualToString:@"About"]) {
+        [item setTarget:target];
+        [item setAction:@selector(menuItemClicked:)];
+        [item setRepresentedObject:@"app:about"];
+        [item setEnabled:YES];
+        foundAbout = YES;
+      } else if ([title hasPrefix:@"Quit "] || [title isEqualToString:@"Quit"] ||
+                 ([key isEqualToString:@"q"] && (mask & NSEventModifierFlagCommand))) {
+        [item setTarget:target];
+        [item setAction:@selector(menuItemClicked:)];
+        [item setRepresentedObject:@"app:quit"];
+        [item setKeyEquivalent:@"q"];
+        [item setKeyEquivalentModifierMask:NSEventModifierFlagCommand];
+        [item setEnabled:YES];
+        foundQuit = YES;
+      }
+    }
 
-    [appMenu addItem:[NSMenuItem separatorItem]];
-
-    // Hide Lua Lamp (Cmd+H)
-    NSMenuItem *hideItem = [[NSMenuItem alloc] initWithTitle:@"Hide Lua Lamp"
-                                                      action:@selector(hide:)
-                                               keyEquivalent:@"h"];
-    [hideItem setKeyEquivalentModifierMask:NSEventModifierFlagCommand];
-    [appMenu addItem:hideItem];
-
-    // Hide Others (Option+Cmd+H)
-    NSMenuItem *hideOthersItem = [[NSMenuItem alloc] initWithTitle:@"Hide Others"
-                                                            action:@selector(hideOtherApplications:)
-                                                     keyEquivalent:@"h"];
-    [hideOthersItem setKeyEquivalentModifierMask:NSEventModifierFlagCommand | NSEventModifierFlagOption];
-    [appMenu addItem:hideOthersItem];
-
-    // Show All
-    NSMenuItem *showAllItem = [[NSMenuItem alloc] initWithTitle:@"Show All"
-                                                         action:@selector(unhideAllApplications:)
+    // Insert missing standard items if SDL did not populate them
+    if (!foundAbout) {
+      NSMenuItem *aboutItem = [[NSMenuItem alloc] initWithTitle:@"About Lua Lamp"
+                                                         action:@selector(menuItemClicked:)
                                                   keyEquivalent:@""];
-    [appMenu addItem:showAllItem];
+      [aboutItem setTarget:target];
+      [aboutItem setRepresentedObject:@"app:about"];
+      [aboutItem setEnabled:YES];
+      [appMenu insertItem:aboutItem atIndex:0];
+    }
 
-    [appMenu addItem:[NSMenuItem separatorItem]];
+    if (!foundSettings) {
+      NSMenuItem *settingsItem = [[NSMenuItem alloc] initWithTitle:@"Settings…"
+                                                            action:@selector(menuItemClicked:)
+                                                     keyEquivalent:@","];
+      [settingsItem setKeyEquivalentModifierMask:NSEventModifierFlagCommand];
+      [settingsItem setTarget:target];
+      [settingsItem setRepresentedObject:@"app:open-settings"];
+      [settingsItem setEnabled:YES];
+      NSInteger insIdx = MIN((NSInteger)1, [appMenu numberOfItems]);
+      [appMenu insertItem:settingsItem atIndex:insIdx];
+    }
 
-    // Quit Lua Lamp (Cmd+Q)
-    NSMenuItem *quitItem = [[NSMenuItem alloc] initWithTitle:@"Quit Lua Lamp"
-                                                      action:@selector(menuItemClicked:)
-                                               keyEquivalent:@"q"];
-    [quitItem setKeyEquivalentModifierMask:NSEventModifierFlagCommand];
-    [quitItem setTarget:target];
-    [quitItem setRepresentedObject:@"app:quit"];
-    [appMenu addItem:quitItem];
+    if (!foundQuit) {
+      NSMenuItem *quitItem = [[NSMenuItem alloc] initWithTitle:@"Quit Lua Lamp"
+                                                        action:@selector(menuItemClicked:)
+                                                 keyEquivalent:@"q"];
+      [quitItem setKeyEquivalentModifierMask:NSEventModifierFlagCommand];
+      [quitItem setTarget:target];
+      [quitItem setRepresentedObject:@"app:quit"];
+      [quitItem setEnabled:YES];
+      [appMenu addItem:quitItem];
+    }
   }
 }
 
@@ -233,9 +263,12 @@ int f_set_native_menu(lua_State *L) {
       setup_default_macos_menu();
       mainMenu = [NSApp mainMenu];
     }
+    [mainMenu setAutoenablesItems:NO];
 
     LuaLampMenuTarget *target = get_menu_target();
     int num_menus = (int)lua_rawlen(L, 1);
+
+    NSString *processName = [[NSProcessInfo processInfo] processName];
 
     for (int i = 1; i <= num_menus; i++) {
       lua_rawgeti(L, 1, i);
@@ -249,7 +282,14 @@ int f_set_native_menu(lua_State *L) {
 
           BOOL isAppMenu = [nsTitle caseInsensitiveCompare:@"Lua Lamp"] == NSOrderedSame ||
                            [nsTitle caseInsensitiveCompare:@"Application"] == NSOrderedSame ||
-                           [nsTitle caseInsensitiveCompare:@"App"] == NSOrderedSame;
+                           [nsTitle caseInsensitiveCompare:@"App"] == NSOrderedSame ||
+                           (processName && [nsTitle caseInsensitiveCompare:processName] == NSOrderedSame);
+
+          lua_getfield(L, -1, "is_app_menu");
+          if (lua_isboolean(L, -1) && lua_toboolean(L, -1)) {
+            isAppMenu = YES;
+          }
+          lua_pop(L, 1);
 
           NSMenuItem *menuItem = nil;
           NSMenu *submenu = nil;
@@ -258,6 +298,11 @@ int f_set_native_menu(lua_State *L) {
             // Use the standard system application menu at index 0. Never create a duplicate!
             menuItem = [mainMenu itemAtIndex:0];
             submenu = [menuItem submenu];
+            if (!submenu) {
+              submenu = [[NSMenu alloc] initWithTitle:nsTitle];
+              [menuItem setSubmenu:submenu];
+            }
+            [submenu setAutoenablesItems:NO];
           } else {
             // Search for existing top-level menu starting at index 1
             for (NSUInteger idx = 1; idx < [mainMenu numberOfItems]; idx++) {
@@ -272,7 +317,19 @@ int f_set_native_menu(lua_State *L) {
               menuItem = [[NSMenuItem alloc] initWithTitle:nsTitle action:nil keyEquivalent:@""];
               submenu = [[NSMenu alloc] initWithTitle:nsTitle];
               [menuItem setSubmenu:submenu];
-              [mainMenu addItem:menuItem];
+
+              // Insert menu keeping standard order (keep Window before Help)
+              NSUInteger insertIdx = [mainMenu numberOfItems];
+              if (![nsTitle isEqualToString:@"Help"]) {
+                for (NSUInteger idx = 1; idx < [mainMenu numberOfItems]; idx++) {
+                  NSMenuItem *m = [mainMenu itemAtIndex:idx];
+                  if ([[m.submenu title] isEqualToString:@"Window"] || [[m.submenu title] isEqualToString:@"Help"]) {
+                    insertIdx = idx;
+                    break;
+                  }
+                }
+              }
+              [mainMenu insertItem:menuItem atIndex:insertIdx];
             } else {
               submenu = [menuItem submenu];
               if (!submenu) {
@@ -281,6 +338,7 @@ int f_set_native_menu(lua_State *L) {
               }
             }
 
+            [submenu setAutoenablesItems:NO];
             // For non-application menus, clear items to sync fresh with Lua
             [submenu removeAllItems];
           }
@@ -316,7 +374,15 @@ int f_set_native_menu(lua_State *L) {
                   NSMenuItem *subItem = nil;
                   if (isAppMenu) {
                     for (NSMenuItem *existing in [submenu itemArray]) {
-                      if ([existing.title isEqualToString:itemTitle]) {
+                      NSString *exTitle = [existing title];
+                      NSString *exKey = [existing keyEquivalent];
+                      NSEventModifierFlags exMask = [existing keyEquivalentModifierMask];
+
+                      if ([exTitle isEqualToString:itemTitle] ||
+                          ([itemTitle hasPrefix:@"Settings"] && ([exTitle hasPrefix:@"Settings"] || [exTitle hasPrefix:@"Preferences"])) ||
+                          ([itemTitle hasPrefix:@"Preferences"] && ([exTitle hasPrefix:@"Settings"] || [exTitle hasPrefix:@"Preferences"])) ||
+                          ([itemTitle hasPrefix:@"About"] && [exTitle hasPrefix:@"About"]) ||
+                          ([itemKey length] > 0 && [itemKey isEqualToString:exKey] && (itemMask == exMask))) {
                         subItem = existing;
                         break;
                       }
@@ -327,21 +393,31 @@ int f_set_native_menu(lua_State *L) {
                     subItem = [[NSMenuItem alloc] initWithTitle:itemTitle
                                                          action:@selector(menuItemClicked:)
                                                   keyEquivalent:itemKey];
+                    [subItem setKeyEquivalentModifierMask:itemMask];
+                    [subItem setTarget:target];
+                    if (cmd_str) {
+                      [subItem setRepresentedObject:[NSString stringWithUTF8String:cmd_str]];
+                    }
+                    [subItem setEnabled:YES];
+
                     if (isAppMenu) {
                       // Insert before the last separator/Quit item if possible
-                      NSInteger insIdx = MAX(0, [submenu numberOfItems] - 2);
+                      NSInteger insIdx = MAX((NSInteger)1, [submenu numberOfItems] - 2);
                       [submenu insertItem:subItem atIndex:insIdx];
                     } else {
                       [submenu addItem:subItem];
                     }
                   } else {
-                    [subItem setKeyEquivalent:itemKey];
-                  }
-
-                  [subItem setKeyEquivalentModifierMask:itemMask];
-                  [subItem setTarget:target];
-                  if (cmd_str) {
-                    [subItem setRepresentedObject:[NSString stringWithUTF8String:cmd_str]];
+                    [subItem setTarget:target];
+                    [subItem setAction:@selector(menuItemClicked:)];
+                    if ([itemKey length] > 0) {
+                      [subItem setKeyEquivalent:itemKey];
+                      [subItem setKeyEquivalentModifierMask:itemMask];
+                    }
+                    if (cmd_str) {
+                      [subItem setRepresentedObject:[NSString stringWithUTF8String:cmd_str]];
+                    }
+                    [subItem setEnabled:YES];
                   }
                 }
               }

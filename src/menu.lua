@@ -105,23 +105,19 @@ function menu:sync_native()
   if PLATFORM == "Mac OS X" and system.set_native_menu then
     local tree = {}
     for _, cat in ipairs(self.categories_order) do
-      -- On macOS, the system application menu is already populated at item 0.
-      -- Skip "Lua Lamp" and "Application" so we never create a duplicate menu in the bar!
-      if cat ~= "Lua Lamp" and cat ~= "Application" then
-        local cat_items = self.categories[cat] or {}
-        local items_copy = {}
-        for _, it in ipairs(cat_items) do
-          table.insert(items_copy, {
-            text = it.text,
-            shortcut = it.shortcut,
-            command = it.command,
-          })
-        end
-        table.insert(tree, {
-          title = cat,
-          items = items_copy,
+      local cat_items = self.categories[cat] or {}
+      local items_copy = {}
+      for _, it in ipairs(cat_items) do
+        table.insert(items_copy, {
+          text = it.text,
+          shortcut = it.shortcut,
+          command = it.command,
         })
       end
+      table.insert(tree, {
+        title = cat,
+        items = items_copy,
+      })
     end
     system.set_native_menu(tree)
   end
@@ -172,7 +168,15 @@ end
 function menu.init_defaults()
   local is_mac = (PLATFORM == "Mac OS X")
 
-  if not is_mac then
+  if is_mac then
+    -- On macOS, the standard application menu lives in the system app menu (item 0).
+    -- Registering "Lua Lamp" configures Settings… and About in the system application menu.
+    menu:register("Lua Lamp", {
+      { text = "About Lua Lamp", command = "app:about" },
+      menu.DIVIDER,
+      { text = "Settings…", shortcut = "Cmd+,", command = "app:open-settings" },
+    })
+  else
     -- On Linux / Windows, in-window menu bar requires "File" menu containing Settings and Quit
     menu:register("File", {
       { text = "Settings…", shortcut = "Ctrl+,", command = "app:open-settings" },
