@@ -63,13 +63,23 @@ gallery.TABS = {
 }
 
 function gallery:on_mouse_wheel(dy, dx)
-  -- 1. Check nested scrollview first
+  -- 1. Check nested scrollview first if cursor is directly over it
   if self.nested_scroll:is_in_viewport(self.mouse_x or 0, self.mouse_y or 0) then
     if self.nested_scroll:on_mouse_wheel(dy, dx) then return true end
   end
 
-  -- 2. Main gallery scrollview
-  return self.scroll_view:on_mouse_wheel(dy, dx)
+  -- 2. Main gallery scrollview: scroll if in content area
+  if self.scroll_view:is_in_viewport(self.mouse_x or 0, self.mouse_y or 0) then
+    return self.scroll_view:on_mouse_wheel(dy, dx)
+  end
+
+  -- 3. Also allow scrolling when cursor is over sidebar or padding (fallback)
+  return self.scroll_view:on_mouse_wheel(dy, dx, true)
+end
+
+function gallery:update()
+  self.scroll_view:update()
+  self.nested_scroll:update()
 end
 
 function gallery:on_mouse_moved(px, py)

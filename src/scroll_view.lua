@@ -125,9 +125,10 @@ end
 --- Converts vertical wheel delta into scaled target offset with boundary clamping.
 ---@param dy number Vertical scroll delta (positive is up, negative is down)
 ---@param dx number? Horizontal scroll delta (reserved for horizontal scrolling)
+---@param force boolean? If true, bypass viewport bounds check when caller explicitly targets this container
 ---@return boolean True if the scroll event was consumed
-function ScrollView:on_mouse_wheel(dy, dx)
-  if not self:is_in_viewport(self.last_mouse_x or self.viewport_x, self.last_mouse_y or self.viewport_y) then
+function ScrollView:on_mouse_wheel(dy, dx, force)
+  if not force and not self:is_in_viewport(self.last_mouse_x or self.viewport_x, self.last_mouse_y or self.viewport_y) then
     return false
   end
 

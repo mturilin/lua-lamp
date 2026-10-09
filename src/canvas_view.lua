@@ -177,6 +177,13 @@ function CanvasView:on_mouse_wheel(y, x)
   return false
 end
 
+function CanvasView:update()
+  CanvasView.super.update(self)
+  if self.mode == "gallery" then
+    gallery:update()
+  end
+end
+
 function CanvasView:on_text_input(text)
   if self.mode == "gallery" then
     gallery:on_text_input(text)

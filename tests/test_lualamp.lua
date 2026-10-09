@@ -525,9 +525,19 @@ gallery:draw(1000, 650)
 renderer.end_frame()
 
 gallery:on_mouse_moved(150, 150)
-gallery:on_mouse_wheel(1, 0)
+gallery:on_mouse_wheel(-1, 0)
 gallery:on_mouse_pressed("left", 150, 150)
 gallery:on_mouse_released("left", 150, 150)
+
+-- Test live event dispatching of mousewheel into active View and Gallery
+core.on_event("mousemoved", 400, 300)
+local init_scroll = gallery.scroll_view.scroll_to_y
+core.on_event("mousewheel", -1, 0)
+assert(gallery.scroll_view.scroll_to_y > init_scroll, "Downward mousewheel event must advance gallery scroll_to_y")
+core.root_view:update()
+assert(gallery.scroll_view.scroll_y > 0, "RootView update must interpolate gallery scroll_y")
+core.on_event("mousewheel", 1, 0)
+core.root_view:update()
 
 print("[PASS] ScrollView Component, Vector UI Primitives, Verified Icons & Component Gallery verified.")
 

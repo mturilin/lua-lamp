@@ -421,7 +421,7 @@ function core.on_event(type, a, b, c, d)
       core.root_view:on_mouse_released(a, b, c)
       core.redraw = true
     elseif type == "mousewheel" then
-      core.root_view:on_mouse_wheel(b, a)
+      core.root_view:on_mouse_wheel(a, b)
       core.redraw = true
     elseif type == "textinput" then
       core.root_view:on_text_input(a)
