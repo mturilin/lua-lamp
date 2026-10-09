@@ -97,6 +97,7 @@ end
 core.root_view.root_node.views = { core.canvas_view }
 core.root_view.root_node.active_view = core.canvas_view
 core.active_view = core.canvas_view
+assert(core.root_view.root_node:should_show_tabs() == false, "Application RootView should never display text editor document tabs by default")
 
 local win_w, win_h = renderer.get_size()
 print(string.format("Testing SDL3 Compositor Frame Rendering (Window: %dx%d)...", math.floor(win_w), math.floor(win_h)))

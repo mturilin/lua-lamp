@@ -129,6 +129,7 @@ function framework.App(config)
   local view = config.initial_view or (config.build and config.build())
   if view then
     view.permissions = declared_perms
+    view.show_tabs = false
     if core.root_view then
       core.root_view.root_node.views = { view }
       core.root_view.root_node.active_view = view

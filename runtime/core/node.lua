@@ -264,6 +264,9 @@ end
 
 function Node:should_show_tabs()
   if self.locked then return false end
+  if config.show_tabs == false then return false end
+  if self.show_tabs == false then return false end
+  if self.active_view and self.active_view.show_tabs == false then return false end
   local dn = core.root_view.dragged_node
   if #self.views > 1
      or (dn and dn.dragging) then -- show tabs while dragging

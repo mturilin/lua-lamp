@@ -26,7 +26,9 @@ config.non_word_chars = " \t\n/\\()\"':,.;<>~!@#$%^&*|+=[]{}`?-"
 config.undo_merge_timeout = 0.3
 config.max_undos = 10000
 config.max_tabs = 8
-config.always_show_tabs = true
+-- In Lua Lamp generic desktop applications, editor document tabs are disabled by default
+config.always_show_tabs = false
+config.show_tabs = false
 -- Possible values: false, true, "no_selection"
 config.highlight_current_line = true
 config.line_height = 1.2

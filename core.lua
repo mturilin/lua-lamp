@@ -309,6 +309,7 @@ function core.init()
       core.canvas_view = CanvasView()
       primary_view = core.canvas_view
     end
+    core.root_view.root_node.show_tabs = false
     core.root_view.root_node.views = { primary_view }
     core.root_view.root_node.active_view = primary_view
     core.active_view = primary_view

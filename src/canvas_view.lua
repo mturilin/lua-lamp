@@ -17,6 +17,7 @@ local CanvasView = View:extend()
 function CanvasView:new()
   CanvasView.super.new(self)
   self.mode = "gallery" -- Default to the comprehensive component showcase
+  self.show_tabs = false -- Never render text editor document tabs over the application view
 end
 
 function CanvasView:get_name()
