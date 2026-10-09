@@ -134,13 +134,86 @@ Never render raw, binary 1-bit staircase steps on dark backgrounds.
 
 ---
 
-## 4. Verification Checklist
+## 4. Framework Code Documentation & Architectural Clarity Directives
+
+All framework code in Lua Lamp (`core.lua`, `src/*.lua`, `runtime/**/*.lua`) must be thoroughly, professionally documented so that any engineer or agent can immediately understand its architecture, contracts, and implementation details.
+
+### 4.1 Top-of-File Header Documentation
+Every single source file in the framework **MUST** begin with a descriptive header comment block at the very top:
+1. **Module Name & Component Identity**: Clear, standardized naming (e.g. `Lua Lamp ScrollView Component`).
+2. **File Purpose & Architectural Role**: A concise multi-line summary explaining why this file exists, what subsystem it belongs to, and how it interacts with the rest of the framework.
+3. **Key Invariants & Capabilities**: Core guarantees (e.g., non-blocking coroutines, scissor clipping, subpixel anti-aliasing, coordinate transforms).
+4. **Public Exports / Contracts**: Overview of what the module exports or returns.
+
+*Example*:
+```lua
+-- ============================================================================
+-- Lua Lamp ScrollView Component (`src/scroll_view.lua`)
+--
+-- High-performance, lightweight scrollable viewport container conforming to the
+-- architecture of Flutter (SingleChildScrollView) and Avalonia (ScrollViewer).
+--
+-- Key Responsibilities:
+-- - Viewport scissor clipping via renderer.set_clip_rect() with local origin translation
+-- - Smooth 60 FPS exponential damping scroll interpolation (scroll_to_y -> scroll_y)
+-- - Native macOS-style rounded capsule scrollbar thumb with dynamic width expansion and auto-fade
+-- - Coordinate transformation between window viewport space and scrollable content space
+--
+-- Exports:
+-- - ScrollView class table callable as ScrollView(options)
+-- ============================================================================
+```
+
+### 4.2 Function Purpose & Parameter Contracts
+Every function, method, and constructor (public or non-trivial internal helper) **MUST** document its purpose, parameters, return values, and side effects using structured doc comments (e.g., EmmyLua format `---@param`, `---@return`):
+1. **Purpose**: Plain English explanation of what the function achieves and why it is called.
+2. **Parameters (`@param`)**: Parameter name, expected type (`number`, `string`, `table`, `boolean`, `function`), and units or coordinate frames (e.g. `px: number @Mouse X in window pixel coordinates`, `dy: number @Vertical scroll delta; positive is up`).
+3. **Return Values (`@return`)**: Returned types and semantic meanings (e.g. `@return boolean @True if event was captured/handled, false to propagate`).
+4. **Side Effects / State Changes**: Any changes to global state, clip rect stacks, cursor requests, or thread registrations.
+
+*Example*:
+```lua
+--- Begins viewport scissor clipping and calculates translated local drawing origin.
+--- Must be matched by a corresponding sv:end_clip() call.
+---@param x number Viewport top-left X in window coordinates
+---@param y number Viewport top-left Y in window coordinates
+---@param w number Viewport width
+---@param h number Viewport height
+---@param content_h number Total height of scrollable child content
+---@return number ox Translated X origin to draw children at (x)
+---@return number oy Translated Y origin to draw children at (y - scroll_y)
+function ScrollView:begin_clip(x, y, w, h, content_h)
+```
+
+### 4.3 Inline Explanations for Non-Trivial Logic
+Code must be self-explanatory for simple operations, but non-trivial logic **MUST** be accompanied by explanatory comments:
+- **Trivial code does NOT need noise comments**: Simple assignments (e.g. `self.x = 0`, `local count = 0`), straightforward table instantiations, and routine getters/setters do not need redundant comments.
+- **Non-trivial or subtle logic MUST have comments explaining the "Why"**:
+  - **Mathematical & Geometric Formulas**: Explain DPI scaling calculations (`* SCALE`), integer coordinate snapping (`math.floor`), line-height descender compensations, and subpixel alpha coverage.
+  - **Coordinate Space Transformations**: Detail translations between screen coordinates, local container coordinates, and virtual scrolled content coordinates.
+  - **Interpolation & Damping**: Explain time delta weights, damping factors (`* 0.32`), velocity clamps, and boundary bounce/clamp conditions.
+  - **Platform-Specific Hooks**: Document OS-specific logic (e.g., macOS Cocoa `NSMenu`, AppKit backing scale factor, FreeType cmap mappings).
+  - **Event Routing & Trapping**: Explain why an event is swallowed (`return true`) or forwarded down the widget tree.
+  - **Edge Cases & Error Fallbacks**: Explain recovery mechanisms when a font is missing, a directory monitor fails, or a coroutine encounters an exception.
+
+*Example*:
+```lua
+-- Shift the line box down by ~15% of font height to compensate for unused descender space,
+-- ensuring uppercase glyphs and numerals sit at the exact optical vertical center.
+local optical_shift = math.floor(1.2 * SCALE)
+local text_y = container_y + math.floor((container_h - font:get_height()) / 2) + optical_shift
+```
+
+---
+
+## 5. Verification Checklist
 
 When completing any task:
 1. [ ] **Code Changes**: Implemented cleanly in `core.lua` or `src/`.
-2. [ ] **Optical Alignment**: Verified that text and icons inside buttons, pills, and headers use optical baseline compensation.
-3. [ ] **Edge Smoothing**: Confirmed controls are borderless filled pills or use subpixel antialiasing.
-4. [ ] **Test Execution**: Run `bin/lualamp --test` headlessly and confirm all assertions pass.
-5. [ ] **Bundle & Packaging**: Run `./scripts/bundle_macos_app.sh` (macOS) or `./scripts/bundle_linux.sh` (Linux) to verify artifact generation.
-6. [ ] **Spec Sync**: Update [`SPECIFICATION.md`](file:///Users/mturilin/Dev/lua-lamp/SPECIFICATION.md) to record modified invariants or new features.
-7. [ ] **Doc Sync**: Update [`README.md`](file:///Users/mturilin/Dev/lua-lamp/README.md) if user interaction or CLI commands changed.
+2. [ ] **Code Documentation**: Verified that every modified/created file has a top-of-file purpose header, every function has documented purpose and parameters, and all non-trivial logic includes explanatory comments.
+3. [ ] **Optical Alignment**: Verified that text and icons inside buttons, pills, and headers use optical baseline compensation.
+4. [ ] **Edge Smoothing**: Confirmed controls are borderless filled pills or use subpixel antialiasing.
+5. [ ] **Test Execution**: Run `bin/lualamp --test` headlessly and confirm all assertions pass.
+6. [ ] **Bundle & Packaging**: Run `./scripts/bundle_macos_app.sh` (macOS) or `./scripts/bundle_linux.sh` (Linux) to verify artifact generation.
+7. [ ] **Spec Sync**: Update [`SPECIFICATION.md`](file:///Users/mturilin/Dev/lua-lamp/SPECIFICATION.md) to record modified invariants or new features.
+8. [ ] **Doc Sync**: Update [`README.md`](file:///Users/mturilin/Dev/lua-lamp/README.md) if user interaction or CLI commands changed.

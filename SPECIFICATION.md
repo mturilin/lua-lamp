@@ -187,6 +187,12 @@ It serves dual purposes:
 - **Verified Tabler Icon Font Mapping (`src/icons.lua`)**:
   - All icon constants map directly to exact UTF-8 byte sequences verified against native FreeType cmap in `fonts/tabler-icons.ttf` (`shield`, `shield_check`, `camera`, `microphone`, `folder`, `accessible`, `external_link`, `video`, `layout`, `box`, `list`, `adjustments`, `palette`, `typography`, etc.).
 
+### Invariant 15: Framework Code Documentation & Architectural Clarity Contract
+- All framework source code (`core.lua`, `src/*.lua`, `runtime/**/*.lua`) must adhere to strict documentation standards:
+  1. **Top-of-File Header**: Every source file must begin with a structured header describing the module's identity, architectural purpose, key invariants/responsibilities, and exported contracts.
+  2. **Function Purpose & Parameter Contracts**: Every public or non-trivial function/method must be documented with its purpose, `@param` (name, type, coordinate frame/units), `@return` semantics, and side effects.
+  3. **Inline Explanations for Non-Trivial Logic**: Non-trivial algorithms, coordinate transforms, DPI scaling math, subpixel antialiasing/descender compensations, coroutine damping, event interception, and error fallbacks must include explanatory comments explaining the rationale. Simple, trivial assignments do not require noise comments.
+
 ---
 
 ## 3. Architecture & Directory Blueprint
