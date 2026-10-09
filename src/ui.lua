@@ -240,7 +240,7 @@ function ui.wrap_text(font, text, max_w)
   return lines
 end
 
---- Render multi-line text with automatic word wrapping within max_w
+--- Draw multi-line text with automatic word wrapping within max_w
 ---@param font renderer.font
 ---@param text string
 ---@param x number Left coordinate
@@ -261,6 +261,139 @@ function ui.draw_wrapped_text(font, text, x, y, max_w, color, line_spacing)
     cur_y = cur_y + lh
   end
   return #lines * lh, #lines
+end
+
+--------------------------------------------------------------------------------
+-- Pinglet Button Highlight Standard Primitives
+--------------------------------------------------------------------------------
+
+--- Draw sunken capsule track for segmented control groups (Pinglet style)
+---@param x number Left coordinate
+---@param y number Top coordinate
+---@param w number Width
+---@param h number Height
+---@param radius? number Corner radius (defaults to math.floor(8 * SCALE))
+---@param bg_color? renderer.color Background color
+---@param border_color? renderer.color Optional border color
+function ui.draw_segmented_track(x, y, w, h, radius, bg_color, border_color)
+  local style = require "src.style"
+  local s = SCALE or 1
+  local c = style.colors
+  local r = radius or math.floor(8 * s)
+  local bg = bg_color or c.track_bg or { 15, 20, 28, 255 }
+  local border = border_color or c.track_border
+  ui.draw_rounded_box(x, y, w, h, r, bg, border, border and 1 or 0)
+end
+
+--- Standard Pinglet button drawing primitive adhering to the 5 Cardinal Directives:
+--- 1. Invariant: Zero 1px wireframe border strokes (borderless filled surface)
+--- 2. Active Solid (e.g. Pinglet '60s'): Vibrant filled pill with inverted dark high-contrast text
+--- 3. Active Tinted (e.g. Pinglet '123 Follow', '+ Add Target'): Luminous translucent tint with glowing text & icon
+--- 4. Hover: Smooth translucent pill highlight
+--- 5. Resting: Transparent (inside segmented track) or subtle surface
+--- 6. Optical baseline compensation applied for text and icon independently
+---@param text_font renderer.font Font for the label
+---@param label string Text label
+---@param x number Left coordinate
+---@param y number Top coordinate
+---@param w number Width
+---@param h number Height
+---@param opts? table Options:
+---   - variant: "solid" | "tinted" | "surface" | "ghost" (default: "solid" if is_active, else "ghost")
+---   - is_active: boolean Whether button is currently active / toggled
+---   - is_hover: boolean Whether mouse cursor is hovering over button
+---   - icon: string Optional Tabler icon glyph
+---   - icon_font: renderer.font Font for icon (defaults to style.font_icon)
+---   - accent_theme: "cyan" | "gold" (default: "cyan" for Pinglet sky-400)
+---   - radius: number Corner radius (default: math.floor(6 * SCALE))
+---   - gap: number Gap between icon and label (default: math.floor(7 * SCALE))
+---@return number x, number y, number w, number h
+function ui.draw_button(text_font, label, x, y, w, h, opts)
+  opts = opts or {}
+  local style = require "src.style"
+  local s = SCALE or 1
+  local c = style.colors
+  local radius = opts.radius or math.floor(6 * s)
+  local is_active = opts.is_active or false
+  local is_hover = opts.is_hover or false
+  local accent = opts.accent_theme or "cyan"
+  local variant = opts.variant
+
+  if not variant then
+    if is_active then
+      variant = "solid"
+    elseif is_hover then
+      variant = "hover"
+    else
+      variant = "ghost"
+    end
+  end
+
+  local bg_col = nil
+  local text_col = c.text_primary
+  local icon_col = c.text_primary
+
+  if is_active then
+    if variant == "solid" then
+      -- Vibrant solid pill (Pinglet 60s active button style)
+      bg_col = (accent == "gold") and c.btn_gold_bg or c.btn_accent_bg
+      text_col = (accent == "gold") and c.btn_gold_text or c.btn_accent_text
+      icon_col = text_col
+    elseif variant == "tinted" then
+      -- Luminous translucent tinted pill (Pinglet Follow / Add Target style)
+      bg_col = is_hover and ((accent == "gold") and c.btn_gold_tint_hover or c.btn_tint_hover)
+                         or ((accent == "gold") and c.btn_gold_tint_bg or c.btn_tint_bg)
+      text_col = (accent == "gold") and c.btn_gold_tint_text or c.btn_tint_text
+      icon_col = text_col
+    else
+      bg_col = is_hover and c.surface_hover or c.surface_active
+      text_col = (accent == "gold") and c.lamp_gold or c.btn_accent_bg
+      icon_col = text_col
+    end
+  else
+    if is_hover then
+      -- Smooth translucent hover highlight pill
+      if variant == "tinted" then
+        bg_col = (accent == "gold") and c.btn_gold_tint_hover or c.btn_tint_hover
+        text_col = (accent == "gold") and c.btn_gold_tint_text or c.btn_tint_text
+      else
+        bg_col = c.btn_surface_hover or c.surface_hover
+        text_col = c.btn_surface_text or c.text_primary
+      end
+      icon_col = text_col
+    else
+      -- Resting state
+      if variant == "surface" then
+        bg_col = c.btn_surface_bg or c.surface_hover
+        text_col = c.btn_surface_muted or c.text_secondary
+        icon_col = text_col
+      elseif variant == "tinted" then
+        bg_col = (accent == "gold") and c.btn_gold_tint_bg or c.btn_tint_bg
+        text_col = (accent == "gold") and c.btn_gold_tint_text or c.btn_tint_text
+        icon_col = text_col
+      else
+        -- Ghost (inside segmented track): transparent background
+        bg_col = nil
+        text_col = c.btn_surface_muted or c.text_secondary
+        icon_col = text_col
+      end
+    end
+  end
+
+  -- Draw borderless pill background with subpixel AA corners
+  if bg_col then
+    ui.draw_rounded_box(x, y, w, h, radius, bg_col, nil, 0)
+  end
+
+  -- Draw label and icon with decoupled optical centerlines
+  if opts.icon and opts.icon ~= "" then
+    local ifont = opts.icon_font or style.font_icon
+    ui.draw_centered_icon_and_text(ifont, opts.icon, text_font, label, x, y, w, h, icon_col, text_col, opts.gap or math.floor(7 * s))
+  else
+    ui.draw_centered_text(text_font, label, x, y, w, h, text_col)
+  end
+
+  return x, y, w, h
 end
 
 return ui

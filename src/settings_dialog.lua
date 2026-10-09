@@ -56,6 +56,8 @@ end
 function settings:hide()
   self.visible = false
   self.dragging = false
+  self.mouse_x = nil
+  self.mouse_y = nil
   local core = require "core"
   core.redraw = true
 end
@@ -76,6 +78,8 @@ function settings:on_mouse_moved(px, py)
   if not self.visible then return false end
 
   local s = style.scale
+  self.mouse_x = px
+  self.mouse_y = py
 
   if self.dragging then
     self.x = px - self.drag_offset_x
@@ -97,7 +101,8 @@ function settings:on_mouse_moved(px, py)
   local footer_btn_w = math.floor(84 * s)
   local footer_btn_h = math.floor(30 * s)
   local footer_btn_x = self.x + self.w - footer_btn_w - math.floor(18 * s)
-  self.hover_footer_close = ui.point_in_rect(px, py, footer_btn_x, footer_y + math.floor(8 * s), footer_btn_w, footer_btn_h)
+  local footer_btn_y = footer_y + math.floor((footer_h - footer_btn_h) / 2)
+  self.hover_footer_close = ui.point_in_rect(px, py, footer_btn_x, footer_btn_y, footer_btn_w, footer_btn_h)
 
   -- Check sidebar tabs hover
   self.hover_tab = nil
@@ -227,10 +232,14 @@ function settings:handle_display_click(px, py, x, y, w, h)
   local s = style.scale
   local core = require "core"
 
-  -- Scale options buttons
-  local opt_y = y + math.floor(66 * s)
+  local head_h = style.font_heading:get_height() + math.floor(4 * s)
+  local sub_lines = ui.wrap_text(style.font_small, "Select UI scaling multiplier or auto-detect based on screen DPI.", w)
+  local sub_h = #sub_lines * (style.font_small:get_height() + math.floor(3 * s))
+  local opt_y = y + head_h + sub_h + math.floor(14 * s) + math.floor(32 * s)
+
+  local auto_s = core.get_default_scale()
   local scales = {
-    { label = "Auto", val = core.get_default_scale() },
+    { label = "Auto", val = auto_s },
     { label = "1.0x", val = 1.0 },
     { label = "1.25x", val = 1.25 },
     { label = "1.5x", val = 1.5 },
@@ -239,17 +248,20 @@ function settings:handle_display_click(px, py, x, y, w, h)
     { label = "2.5x", val = 2.5 },
   }
 
-  local btn_w = math.floor(52 * s)
-  local btn_h = math.floor(32 * s)
-  local btn_gap = math.floor(8 * s)
-  local cur_x = x
+  local track_pad = math.floor(3 * s)
+  local track_h = math.floor(36 * s)
+  local btn_h = track_h - track_pad * 2
+  local num_scales = #scales
+  local track_w = math.min(w, math.floor(430 * s))
+  local btn_w = math.floor((track_w - track_pad * 2) / num_scales)
+  local cur_x = x + track_pad
 
   for _, opt in ipairs(scales) do
-    if ui.point_in_rect(px, py, cur_x, opt_y, btn_w, btn_h) then
+    if ui.point_in_rect(px, py, cur_x, opt_y + track_pad, btn_w, btn_h) then
       core.rescale(opt.val)
       return
     end
-    cur_x = cur_x + btn_w + btn_gap
+    cur_x = cur_x + btn_w
   end
 end
 
@@ -257,33 +269,46 @@ function settings:handle_typography_click(px, py, x, y, w, h)
   local s = style.scale
   local core = require "core"
 
-  -- Font family buttons
-  local fam_y = y + math.floor(66 * s)
-  local btn_w = math.floor(170 * s)
-  local btn_h = math.floor(32 * s)
+  local head_h = style.font_heading:get_height() + math.floor(4 * s)
+  local sub_lines = ui.wrap_text(style.font_small, "Manage interface font family, sizing presets, and rendering preview.", w)
+  local sub_h = #sub_lines * (style.font_small:get_height() + math.floor(3 * s))
+  local cur_y = y + head_h + sub_h + math.floor(14 * s)
 
-  if ui.point_in_rect(px, py, x, fam_y, btn_w, btn_h) then
+  local track_pad = math.floor(3 * s)
+  local track_h = math.floor(36 * s)
+  local btn_h = track_h - track_pad * 2
+
+  -- Font family segmented track check
+  cur_y = cur_y + style.font_large:get_height() + math.floor(8 * s)
+  local fam_track_w = math.min(w, math.floor(380 * s))
+  local fam_btn_w = math.floor((fam_track_w - track_pad * 2) / 2)
+  local ps_x = x + track_pad
+  local ss_x = ps_x + fam_btn_w
+
+  if ui.point_in_rect(px, py, ps_x, cur_y + track_pad, fam_btn_w, btn_h) then
     self.font_family = "Public Sans"
     core.redraw = true
     return
-  elseif ui.point_in_rect(px, py, x + btn_w + math.floor(10 * s), fam_y, btn_w, btn_h) then
+  elseif ui.point_in_rect(px, py, ss_x, cur_y + track_pad, fam_btn_w, btn_h) then
     self.font_family = "Source Sans 3"
     core.redraw = true
     return
   end
 
-  -- Font size presets
-  local size_y = y + math.floor(134 * s)
-  local sz_w = math.floor(110 * s)
+  -- Sizing presets segmented track check
+  cur_y = cur_y + track_h + math.floor(14 * s) + style.font_large:get_height() + math.floor(8 * s)
+  local sz_track_w = math.min(w, math.floor(380 * s))
+  local sz_btn_w = math.floor((sz_track_w - track_pad * 2) / 3)
   local sizes = { "Compact", "Standard", "Large" }
-  local cur_x = x
+  local cur_sz_x = x + track_pad
+
   for _, sz in ipairs(sizes) do
-    if ui.point_in_rect(px, py, cur_x, size_y, sz_w, btn_h) then
+    if ui.point_in_rect(px, py, cur_sz_x, cur_y + track_pad, sz_btn_w, btn_h) then
       self.font_size_preset = sz
       core.redraw = true
       return
     end
-    cur_x = cur_x + sz_w + math.floor(10 * s)
+    cur_sz_x = cur_sz_x + sz_btn_w
   end
 end
 
@@ -292,29 +317,37 @@ function settings:handle_theme_click(px, py, x, y, w, h)
   local core = require "core"
   local canvas = require "src.canvas"
 
-  -- Theme buttons
-  local theme_y = y + math.floor(66 * s)
-  local btn_w = math.floor(170 * s)
-  local btn_h = math.floor(36 * s)
+  local head_h = style.font_heading:get_height() + math.floor(4 * s)
+  local sub_lines = ui.wrap_text(style.font_small, "Customize color scheme, ambient background, and animated effects.", w)
+  local sub_h = #sub_lines * (style.font_small:get_height() + math.floor(3 * s))
+  local cur_y = y + head_h + sub_h + math.floor(14 * s)
 
-  -- Dark Mode button
-  if ui.point_in_rect(px, py, x, theme_y, btn_w, btn_h) then
+  local track_pad = math.floor(3 * s)
+  local track_h = math.floor(38 * s)
+  local btn_h = track_h - track_pad * 2
+
+  -- Color palette segmented track check
+  cur_y = cur_y + style.font_large:get_height() + math.floor(8 * s)
+  local theme_track_w = math.min(w, math.floor(380 * s))
+  local theme_btn_w = math.floor((theme_track_w - track_pad * 2) / 2)
+  local dark_x = x + track_pad
+  local light_x = dark_x + theme_btn_w
+
+  if ui.point_in_rect(px, py, dark_x, cur_y + track_pad, theme_btn_w, btn_h) then
     style.set_theme("dark")
     core.redraw = true
     return
-  end
-
-  -- Light Mode button
-  if ui.point_in_rect(px, py, x + btn_w + math.floor(12 * s), theme_y, btn_w, btn_h) then
+  elseif ui.point_in_rect(px, py, light_x, cur_y + track_pad, theme_btn_w, btn_h) then
     style.set_theme("light")
     core.redraw = true
     return
   end
 
-  -- Lamp Glow toggle button
-  local glow_y = y + math.floor(140 * s)
-  local toggle_w = math.floor(220 * s)
-  if ui.point_in_rect(px, py, x, glow_y, toggle_w, btn_h) then
+  -- Lamp Pulse Animation toggle check
+  cur_y = cur_y + track_h + math.floor(20 * s) + style.font_large:get_height() + math.floor(8 * s)
+  local glow_w = math.min(w, math.floor(260 * s))
+  local glow_h = math.floor(38 * s)
+  if ui.point_in_rect(px, py, x, cur_y, glow_w, glow_h) then
     canvas.toggle_lamp()
     core.redraw = true
     return
@@ -409,8 +442,10 @@ function settings:draw(win_w, win_h)
     local is_active = (self.active_tab == tab.id)
     local is_hover = (self.hover_tab == tab.id)
 
-    local tab_bg = is_active and c.surface_active or (is_hover and c.surface_hover or { 0, 0, 0, 0 })
-    ui.draw_rounded_box(sidebar_x, tab_y, sidebar_w, tab_h, math.floor(6 * s), tab_bg, nil, 0)
+    local tab_bg = is_active and (c.btn_gold_tint_bg or c.surface_active) or (is_hover and c.surface_hover or nil)
+    if tab_bg then
+      ui.draw_rounded_box(sidebar_x, tab_y, sidebar_w, tab_h, math.floor(6 * s), tab_bg, nil, 0)
+    end
 
     -- Active indicator pill bar on left
     if is_active then
@@ -418,7 +453,7 @@ function settings:draw(win_w, win_h)
     end
 
     local tab_icon_col = is_active and c.lamp_gold or (is_hover and c.text_primary or c.text_secondary)
-    local tab_text_col = is_active and c.text_primary or (is_hover and c.text_primary or c.text_secondary)
+    local tab_text_col = is_active and (c.btn_gold_tint_text or c.lamp_gold) or (is_hover and c.text_primary or c.text_secondary)
 
     -- Decoupled icon and label rendering with optical baseline compensation
     local iw = (tab.icon and style.font_icon:get_width(tab.icon)) or 0
@@ -473,9 +508,11 @@ function settings:draw(win_w, win_h)
   -- Footer Close Button
   local footer_btn_x = self.x + self.w - footer_btn_w - math.floor(18 * s)
   local footer_btn_y = footer_y + math.floor((footer_h - footer_btn_h) / 2)
-  local f_bg = self.hover_footer_close and c.surface_active or c.surface_hover
-  ui.draw_rounded_box(footer_btn_x, footer_btn_y, footer_btn_w, footer_btn_h, math.floor(6 * s), f_bg, nil, 0)
-  ui.draw_centered_text(style.font_normal, "Close", footer_btn_x, footer_btn_y, footer_btn_w, footer_btn_h, c.text_primary)
+  ui.draw_button(style.font_normal, "Close", footer_btn_x, footer_btn_y, footer_btn_w, footer_btn_h, {
+    variant = "surface",
+    is_hover = self.hover_footer_close,
+    radius = math.floor(6 * s),
+  })
 end
 
 --------------------------------------------------------------------------------
@@ -501,7 +538,7 @@ function settings:draw_display_tab(x, y, w, h, s, c)
   ui.draw_pill_badge(style.font_small, cur_info, x, y, c.pill_bg, c.pill_text, math.floor(10 * s), math.floor(4 * s))
   y = y + math.floor(32 * s)
 
-  -- Scale Switcher Buttons
+  -- Scale Segmented Control Track (Pinglet Style)
   local scales = {
     { label = "Auto", val = auto_s },
     { label = "1.0x", val = 1.0 },
@@ -512,25 +549,31 @@ function settings:draw_display_tab(x, y, w, h, s, c)
     { label = "2.5x", val = 2.5 },
   }
 
-  local btn_w = math.floor(52 * s)
-  local btn_h = math.floor(32 * s)
-  local btn_gap = math.floor(8 * s)
-  local cur_x = x
+  local track_pad = math.floor(3 * s)
+  local track_h = math.floor(36 * s)
+  local btn_h = track_h - track_pad * 2
+  local num_scales = #scales
+  local track_w = math.min(w, math.floor(430 * s))
+  local btn_w = math.floor((track_w - track_pad * 2) / num_scales)
+  local actual_track_w = btn_w * num_scales + track_pad * 2
 
+  ui.draw_segmented_track(x, y, actual_track_w, track_h, math.floor(8 * s))
+
+  local cur_x = x + track_pad
   for _, opt in ipairs(scales) do
     local is_selected = (math.abs(s - opt.val) < 0.05) and (opt.label ~= "Auto" or math.abs(s - auto_s) < 0.05)
-    local btn_bg = is_selected and c.surface_active or c.surface_hover
-    local border_col = is_selected and c.border_accent or nil
-    local border_w = is_selected and 1 or 0
+    local is_hover = self.mouse_x and self.mouse_y and ui.point_in_rect(self.mouse_x, self.mouse_y, cur_x, y + track_pad, btn_w, btn_h)
 
-    ui.draw_rounded_box(cur_x, y, btn_w, btn_h, math.floor(6 * s), btn_bg, border_col, border_w)
-
-    local txt_col = is_selected and c.lamp_gold or c.text_primary
-    ui.draw_centered_text(style.font_normal, opt.label, cur_x, y, btn_w, btn_h, txt_col)
-
-    cur_x = cur_x + btn_w + btn_gap
+    ui.draw_button(style.font_normal, opt.label, cur_x, y + track_pad, btn_w, btn_h, {
+      variant = is_selected and "solid" or "ghost",
+      accent_theme = "cyan",
+      is_active = is_selected,
+      is_hover = is_hover,
+      radius = math.floor(6 * s),
+    })
+    cur_x = cur_x + btn_w
   end
-  y = y + btn_h + math.floor(20 * s)
+  y = y + track_h + math.floor(20 * s)
 
   -- Telemetry Details Box
   local box_h = math.floor(118 * s)
@@ -565,45 +608,70 @@ function settings:draw_typography_tab(x, y, w, h, s, c)
   local sub_h = select(1, ui.draw_wrapped_text(style.font_small, "Manage interface font family, sizing presets, and rendering preview.", x, y, w, c.text_secondary))
   y = y + sub_h + math.floor(14 * s)
 
-  -- Font Family Selector
+  local track_pad = math.floor(3 * s)
+  local track_h = math.floor(36 * s)
+  local btn_h = track_h - track_pad * 2
+
+  -- Font Family Selector (Pinglet Segmented Track)
   renderer.draw_text(style.font_large, "Font Family", x, y, c.text_primary)
   y = y + style.font_large:get_height() + math.floor(8 * s)
 
-  local fam_w = math.floor(170 * s)
-  local fam_h = math.floor(32 * s)
+  local fam_track_w = math.min(w, math.floor(380 * s))
+  local fam_btn_w = math.floor((fam_track_w - track_pad * 2) / 2)
+  local fam_actual_w = fam_btn_w * 2 + track_pad * 2
+
+  ui.draw_segmented_track(x, y, fam_actual_w, track_h, math.floor(8 * s))
 
   local is_ps = (self.font_family == "Public Sans")
-  local ps_bg = is_ps and c.surface_active or c.surface_hover
-  local ps_border = is_ps and c.border_accent or nil
-  ui.draw_rounded_box(x, y, fam_w, fam_h, math.floor(6 * s), ps_bg, ps_border, is_ps and 1 or 0)
-  ui.draw_centered_text(style.font_normal, "Public Sans (Modern)", x, y, fam_w, fam_h, is_ps and c.lamp_gold or c.text_primary)
+  local ps_x = x + track_pad
+  local is_ps_hover = self.mouse_x and self.mouse_y and ui.point_in_rect(self.mouse_x, self.mouse_y, ps_x, y + track_pad, fam_btn_w, btn_h)
+  ui.draw_button(style.font_normal, "Public Sans (Modern)", ps_x, y + track_pad, fam_btn_w, btn_h, {
+    variant = is_ps and "solid" or "ghost",
+    accent_theme = "gold",
+    is_active = is_ps,
+    is_hover = is_ps_hover,
+    radius = math.floor(6 * s),
+  })
 
   local is_ss = (self.font_family == "Source Sans 3")
-  local ss_bg = is_ss and c.surface_active or c.surface_hover
-  local ss_border = is_ss and c.border_accent or nil
-  local ss_x = x + fam_w + math.floor(10 * s)
-  ui.draw_rounded_box(ss_x, y, fam_w, fam_h, math.floor(6 * s), ss_bg, ss_border, is_ss and 1 or 0)
-  ui.draw_centered_text(style.font_normal, "Source Sans 3", ss_x, y, fam_w, fam_h, is_ss and c.lamp_gold or c.text_primary)
+  local ss_x = ps_x + fam_btn_w
+  local is_ss_hover = self.mouse_x and self.mouse_y and ui.point_in_rect(self.mouse_x, self.mouse_y, ss_x, y + track_pad, fam_btn_w, btn_h)
+  ui.draw_button(style.font_normal, "Source Sans 3", ss_x, y + track_pad, fam_btn_w, btn_h, {
+    variant = is_ss and "solid" or "ghost",
+    accent_theme = "gold",
+    is_active = is_ss,
+    is_hover = is_ss_hover,
+    radius = math.floor(6 * s),
+  })
 
-  y = y + fam_h + math.floor(14 * s)
+  y = y + track_h + math.floor(14 * s)
 
-  -- Sizing Presets
+  -- Sizing Presets (Pinglet Segmented Track)
   renderer.draw_text(style.font_large, "Size Preset", x, y, c.text_primary)
   y = y + style.font_large:get_height() + math.floor(8 * s)
 
-  local sz_w = math.floor(110 * s)
+  local sz_track_w = math.min(w, math.floor(380 * s))
+  local sz_btn_w = math.floor((sz_track_w - track_pad * 2) / 3)
+  local sz_actual_w = sz_btn_w * 3 + track_pad * 2
+
+  ui.draw_segmented_track(x, y, sz_actual_w, track_h, math.floor(8 * s))
+
   local sizes = { "Compact", "Standard", "Large" }
-  local cur_x = x
+  local cur_sz_x = x + track_pad
   for _, sz in ipairs(sizes) do
     local is_sz = (self.font_size_preset == sz)
-    local sz_bg = is_sz and c.surface_active or c.surface_hover
-    local sz_border = is_sz and c.border_accent or nil
-    ui.draw_rounded_box(cur_x, y, sz_w, fam_h, math.floor(6 * s), sz_bg, sz_border, is_sz and 1 or 0)
-    ui.draw_centered_text(style.font_normal, sz, cur_x, y, sz_w, fam_h, is_sz and c.lamp_gold or c.text_primary)
-    cur_x = cur_x + sz_w + math.floor(10 * s)
+    local is_hover = self.mouse_x and self.mouse_y and ui.point_in_rect(self.mouse_x, self.mouse_y, cur_sz_x, y + track_pad, sz_btn_w, btn_h)
+    ui.draw_button(style.font_normal, sz, cur_sz_x, y + track_pad, sz_btn_w, btn_h, {
+      variant = is_sz and "solid" or "ghost",
+      accent_theme = "gold",
+      is_active = is_sz,
+      is_hover = is_hover,
+      radius = math.floor(6 * s),
+    })
+    cur_sz_x = cur_sz_x + sz_btn_w
   end
 
-  y = y + fam_h + math.floor(16 * s)
+  y = y + track_h + math.floor(16 * s)
 
   -- Live Typography Preview Box
   local inner_pad = math.floor(14 * s)
@@ -632,40 +700,64 @@ function settings:draw_theme_tab(x, y, w, h, s, c)
   local sub_h = select(1, ui.draw_wrapped_text(style.font_small, "Customize color scheme, ambient background, and animated effects.", x, y, w, c.text_secondary))
   y = y + sub_h + math.floor(14 * s)
 
-  -- Theme Mode Switcher
+  local track_pad = math.floor(3 * s)
+  local track_h = math.floor(38 * s)
+  local btn_h = track_h - track_pad * 2
+
+  -- Color Palette (Pinglet Segmented Track with Luminous Tinted Buttons)
   renderer.draw_text(style.font_large, "Color Palette", x, y, c.text_primary)
   y = y + style.font_large:get_height() + math.floor(8 * s)
 
-  local btn_w = math.floor(170 * s)
-  local btn_h = math.floor(36 * s)
+  local theme_track_w = math.min(w, math.floor(380 * s))
+  local theme_btn_w = math.floor((theme_track_w - track_pad * 2) / 2)
+  local theme_actual_w = theme_btn_w * 2 + track_pad * 2
+
+  ui.draw_segmented_track(x, y, theme_actual_w, track_h, math.floor(8 * s))
 
   local is_dark = (style.current_theme == "dark")
-  local dark_bg = is_dark and c.surface_active or c.surface_hover
-  local dark_border = is_dark and c.border_accent or nil
-  ui.draw_rounded_box(x, y, btn_w, btn_h, math.floor(6 * s), dark_bg, dark_border, is_dark and 1 or 0)
-  ui.draw_centered_icon_and_text(style.font_icon, icons.moon, style.font_normal, "Dark Mode", x, y, btn_w, btn_h, is_dark and c.lamp_gold or c.text_secondary, is_dark and c.lamp_gold or c.text_primary, math.floor(8 * s))
+  local dark_x = x + track_pad
+  local is_dark_hover = self.mouse_x and self.mouse_y and ui.point_in_rect(self.mouse_x, self.mouse_y, dark_x, y + track_pad, theme_btn_w, btn_h)
+  ui.draw_button(style.font_normal, "Dark Mode", dark_x, y + track_pad, theme_btn_w, btn_h, {
+    variant = is_dark and "tinted" or "ghost",
+    accent_theme = "gold",
+    is_active = is_dark,
+    is_hover = is_dark_hover,
+    icon = icons.moon,
+    radius = math.floor(6 * s),
+  })
 
   local is_light = (style.current_theme == "light")
-  local light_bg = is_light and c.surface_active or c.surface_hover
-  local light_border = is_light and c.border_accent or nil
-  local light_x = x + btn_w + math.floor(12 * s)
-  ui.draw_rounded_box(light_x, y, btn_w, btn_h, math.floor(6 * s), light_bg, light_border, is_light and 1 or 0)
-  ui.draw_centered_icon_and_text(style.font_icon, icons.sun, style.font_normal, "Light Mode", light_x, y, btn_w, btn_h, is_light and c.lamp_gold or c.text_secondary, is_light and c.lamp_gold or c.text_primary, math.floor(8 * s))
+  local light_x = dark_x + theme_btn_w
+  local is_light_hover = self.mouse_x and self.mouse_y and ui.point_in_rect(self.mouse_x, self.mouse_y, light_x, y + track_pad, theme_btn_w, btn_h)
+  ui.draw_button(style.font_normal, "Light Mode", light_x, y + track_pad, theme_btn_w, btn_h, {
+    variant = is_light and "tinted" or "ghost",
+    accent_theme = "gold",
+    is_active = is_light,
+    is_hover = is_light_hover,
+    icon = icons.sun,
+    radius = math.floor(6 * s),
+  })
 
-  y = y + btn_h + math.floor(20 * s)
+  y = y + track_h + math.floor(20 * s)
 
-  -- Lamp Pulse Animation Toggle
+  -- Lamp Pulse Animation Toggle (Pinglet Luminous Tinted Button)
   renderer.draw_text(style.font_large, "Canvas Animation", x, y, c.text_primary)
   y = y + style.font_large:get_height() + math.floor(8 * s)
 
-  local glow_w = math.floor(220 * s)
-  local glow_bg = canvas.lamp_on and c.surface_active or c.surface_hover
-  local glow_border = canvas.lamp_on and c.border_accent or nil
-  ui.draw_rounded_box(x, y, glow_w, btn_h, math.floor(6 * s), glow_bg, glow_border, canvas.lamp_on and 1 or 0)
-
+  local glow_w = math.min(w, math.floor(260 * s))
+  local glow_h = math.floor(38 * s)
+  local is_glow_hover = self.mouse_x and self.mouse_y and ui.point_in_rect(self.mouse_x, self.mouse_y, x, y, glow_w, glow_h)
   local glow_icon = canvas.lamp_on and icons.bulb_filled or icons.bulb_off
   local glow_label = canvas.lamp_on and "Glowing Filament: Active" or "Glowing Filament: Off"
-  ui.draw_centered_icon_and_text(style.font_icon, glow_icon, style.font_normal, glow_label, x, y, glow_w, btn_h, canvas.lamp_on and c.lamp_gold or c.text_secondary, canvas.lamp_on and c.lamp_gold or c.text_secondary, math.floor(8 * s))
+
+  ui.draw_button(style.font_normal, glow_label, x, y, glow_w, glow_h, {
+    variant = "tinted",
+    accent_theme = "gold",
+    is_active = canvas.lamp_on,
+    is_hover = is_glow_hover,
+    icon = glow_icon,
+    radius = math.floor(7 * s),
+  })
 end
 
 return settings

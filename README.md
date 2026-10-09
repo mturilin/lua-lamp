@@ -273,6 +273,29 @@ framework.Menu:register("Tools", {
 })
 ```
 
+#### Example 4: Drawing Pinglet-Style Segmented Controls & Buttons
+```lua
+local framework = require "src.framework"
+
+-- 1. Draw a sunken capsule track behind a button group
+framework.draw_segmented_track(x, y, track_w, 36 * SCALE, 8 * SCALE)
+
+-- 2. Render an active vibrant solid pill (Pinglet '60s' style with dark text)
+framework.draw_button(framework.Style.font_normal, "60s", btn_x, btn_y, btn_w, 30 * SCALE, {
+  variant = "solid",
+  accent_theme = "cyan",
+  is_active = true,
+})
+
+-- 3. Render a luminous translucent tinted pill (Pinglet 'Follow' / '+ Add Target' style)
+framework.draw_button(framework.Style.font_normal, "Follow", btn2_x, btn_y, btn2_w, 30 * SCALE, {
+  variant = "tinted",
+  accent_theme = "cyan",
+  is_active = true,
+  icon = framework.Icons.settings,
+})
+```
+
 ---
 
 ## 📐 Project Architecture

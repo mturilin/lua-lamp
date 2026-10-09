@@ -69,6 +69,24 @@ style.warn = { common.color "#f59e0b" }
 style.error = { common.color "#ef4444" }
 style.modified = { common.color "#38bdf8" }
 
+-- Pinglet Button Highlight Standard Tokens
+style.track_bg = { common.color "#0f141c" }
+style.track_border = { common.color "rgba(30, 41, 59, 0.6)" }
+style.btn_accent_bg = { common.color "#38bdf8" }
+style.btn_accent_text = { common.color "#0c1018" }
+style.btn_tint_bg = { common.color "rgba(56, 189, 248, 0.18)" }
+style.btn_tint_text = { common.color "#38bdf8" }
+style.btn_tint_hover = { common.color "rgba(56, 189, 248, 0.32)" }
+style.btn_gold_bg = { common.color "#ffc425" }
+style.btn_gold_text = { common.color "#111418" }
+style.btn_gold_tint_bg = { common.color "rgba(255, 196, 37, 0.18)" }
+style.btn_gold_tint_text = { common.color "#ffc425" }
+style.btn_gold_tint_hover = { common.color "rgba(255, 196, 37, 0.32)" }
+style.btn_surface_bg = { common.color "#21262d" }
+style.btn_surface_hover = { common.color "rgba(255, 255, 255, 0.09)" }
+style.btn_surface_text = { common.color "#f0f6fc" }
+style.btn_surface_muted = { common.color "#8b949e" }
+
 style.syntax = {
   ["normal"] = style.text,
   ["symbol"] = style.text,

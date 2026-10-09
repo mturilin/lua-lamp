@@ -31,6 +31,23 @@ local themes = {
     accent_red        = { 230, 57, 70, 255 },      -- Alert red
     pill_bg           = { 26, 35, 52, 255 },       -- Lua tinted badge
     pill_text         = { 140, 190, 255, 255 },
+    -- Pinglet Button Highlight Standard Tokens (Dark)
+    track_bg          = { 15, 20, 28, 255 },       -- Recessed dark capsule track
+    track_border      = { 30, 41, 59, 160 },       -- Subtle track boundary
+    btn_accent_bg     = { 56, 189, 248, 255 },     -- #38bdf8 (Pinglet Sky-400 solid pill)
+    btn_accent_text   = { 12, 16, 24, 255 },       -- #0c1018 (Inverted high-contrast dark text)
+    btn_tint_bg       = { 26, 43, 56, 255 },       -- #1a2b38 (Pinglet luminous cyan tint)
+    btn_tint_text     = { 56, 189, 248, 255 },     -- #38bdf8 (Pinglet glowing cyan text)
+    btn_tint_hover    = { 36, 62, 82, 255 },       -- #243e52 (Hover luminous cyan tint)
+    btn_gold_bg       = { 255, 196, 37, 255 },     -- Warm lamp gold solid pill
+    btn_gold_text     = { 17, 20, 24, 255 },       -- Inverted dark text on gold pill
+    btn_gold_tint_bg  = { 42, 34, 18, 255 },       -- Luminous amber/gold tint
+    btn_gold_tint_text= { 255, 196, 37, 255 },     -- Glowing gold text
+    btn_gold_tint_hover = { 58, 46, 24, 255 },     -- Hover gold tint
+    btn_surface_bg    = { 33, 38, 45, 255 },       -- Borderless resting surface
+    btn_surface_hover = { 48, 54, 61, 255 },       -- Translucent hover highlight
+    btn_surface_text  = { 240, 246, 252, 255 },    -- Crisp surface text
+    btn_surface_muted = { 139, 148, 158, 255 },    -- Muted text for resting controls
   },
   light = {
     background        = { 246, 248, 250, 255 },    -- Crisp clean canvas
@@ -52,6 +69,23 @@ local themes = {
     accent_red        = { 207, 34, 46, 255 },
     pill_bg           = { 234, 242, 255, 255 },
     pill_text         = { 0, 80, 190, 255 },
+    -- Pinglet Button Highlight Standard Tokens (Light)
+    track_bg          = { 234, 238, 243, 255 },    -- Recessed light capsule track
+    track_border      = { 208, 215, 222, 200 },
+    btn_accent_bg     = { 2, 132, 199, 255 },      -- #0284c7 (Vibrant sky-600 solid pill)
+    btn_accent_text   = { 255, 255, 255, 255 },    -- Crisp white on vibrant pill
+    btn_tint_bg       = { 224, 242, 254, 255 },    -- #e0f2fe (Soft sky-100 tint)
+    btn_tint_text     = { 3, 105, 161, 255 },      -- #0369a1 (Deep sky-700 text)
+    btn_tint_hover    = { 186, 230, 253, 255 },    -- #bae6fd (Hover sky-200 tint)
+    btn_gold_bg       = { 217, 130, 0, 255 },      -- Solid warm amber pill
+    btn_gold_text     = { 255, 255, 255, 255 },    -- Crisp white on amber
+    btn_gold_tint_bg  = { 254, 243, 199, 255 },    -- Soft amber tint
+    btn_gold_tint_text= { 180, 83, 9, 255 },       -- Deep amber text
+    btn_gold_tint_hover = { 253, 230, 138, 255 },  -- Hover amber tint
+    btn_surface_bg    = { 243, 244, 246, 255 },
+    btn_surface_hover = { 229, 231, 235, 255 },
+    btn_surface_text  = { 31, 35, 40, 255 },
+    btn_surface_muted = { 100, 116, 139, 255 },
   }
 }
 

@@ -230,7 +230,7 @@ core.rescale(detected_scale) -- restore
 core.on_event("keypressed", "escape")
 assert(settings.visible == false, "Pressing escape should dismiss Settings dialog")
 
--- Test Mini-Flutter Framework Facade
+-- Test Mini-Flutter Framework Facade & Pinglet Button Highlight Standard
 assert(framework.Widget ~= nil, "framework.Widget should be defined")
 assert(framework.Button ~= nil, "framework.Button should be defined")
 assert(framework.NoteBook ~= nil, "framework.NoteBook should be defined")
@@ -239,7 +239,34 @@ assert(framework.Settings ~= nil, "framework.Settings should be defined")
 assert(framework.Menu ~= nil, "framework.Menu should be defined")
 assert(framework.UI ~= nil, "framework.UI should be defined")
 assert(framework.Icons ~= nil, "framework.Icons should be defined")
-print("[PASS] Unified Menu System, Extensible Settings Modal, & Mini-Flutter Facade verified.")
+assert(type(framework.draw_button) == "function", "framework.draw_button should be exposed")
+assert(type(framework.draw_segmented_track) == "function", "framework.draw_segmented_track should be exposed")
+
+-- Test Pinglet Button Highlight Rendering Primitives (all variants)
+renderer.begin_frame()
+ui.draw_segmented_track(100, 100, 300, 36, 8)
+local bx, by, bw, bh = ui.draw_button(style.font_normal, "60s", 103, 103, 48, 30, {
+  variant = "solid", accent_theme = "cyan", is_active = true
+})
+assert(bx == 103 and bw == 48, "ui.draw_button solid should return geometry")
+
+local tx, ty, tw, th = ui.draw_button(style.font_normal, "Follow", 155, 103, 60, 30, {
+  variant = "tinted", accent_theme = "cyan", is_active = true, icon = icons.settings
+})
+assert(tx == 155 and tw == 60, "ui.draw_button tinted with icon should return geometry")
+
+local sx, sy, sw, sh = ui.draw_button(style.font_normal, "Action", 220, 103, 60, 30, {
+  variant = "surface", is_hover = true
+})
+assert(sx == 220 and sw == 60, "ui.draw_button surface hover should return geometry")
+
+local gx, gy, gw, gh = ui.draw_button(style.font_normal, "Ghost", 285, 103, 40, 30, {
+  variant = "ghost", is_active = false
+})
+assert(gx == 285 and gw == 40, "ui.draw_button ghost should return geometry")
+renderer.end_frame()
+
+print("[PASS] Unified Menu System, Extensible Settings Modal, & Pinglet Button Standard verified.")
 
 print("\n========================================")
 print("ALL LUA LAMP VERIFICATION TESTS PASSED!")

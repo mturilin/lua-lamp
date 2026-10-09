@@ -95,12 +95,14 @@ local text_y = container_y + math.floor((container_h - font:get_height()) / 2) +
 ```
 *Rationale*: Shifting the line box down by $\approx \lfloor 0.15 \times \text{font:get\_height()} \rfloor$ (1px at 1x, 2px at 2x Retina) balances the top and bottom margins, achieving an exact 50/50 visual ink center.
 
-#### Rule 2: The Borderless Surface Principle (The Death of Wireframes)
-Never wrap dark-mode toolbar controls, segmented items, or action buttons in 1px outline border strokes.
-- **Resting state**: Clean, flat, borderless (`rgba(255, 255, 255, 0)` or subtle translucent glass `rgba(255, 255, 255, 0.04)`).
+#### Rule 2: The Borderless Surface Principle & Pinglet Button Highlight Standard
+Never wrap dark-mode toolbar controls, segmented items, or action buttons in 1px outline border strokes. Adopt the **Pinglet Button Highlight Standard**:
+- **Segmented Control Track**: Grouped controls sit inside a recessed dark capsule track (`ui.draw_segmented_track`, `c.track_bg`).
+- **Active Solid Pill (`variant = "solid"`)**: Vibrant solid pill (Pinglet `60s` style) with inverted dark text (`#0c1018`), SemiBold weight, and zero border stroke (`c.btn_accent_bg` / `c.btn_accent_text`).
+- **Active Tinted Pill (`variant = "tinted"`)**: Luminous translucent tinted pill (Pinglet `123 Follow`, `+ Add Target` style) with glowing text and icon (`c.btn_tint_bg` / `c.btn_tint_text`), zero border stroke.
+- **Resting state**: Clean, flat, borderless (`rgba(255, 255, 255, 0)` inside track or subtle translucent surface `c.surface_hover`).
 - **Hover state**: Smooth, luminous translucent pill (`rgba(255, 255, 255, 0.09)` to `0.12`).
-- **Active / Toggled state**: Luminous accent tint (`rgba(245, 158, 11, 0.18)` gold / `rgba(56, 189, 248, 0.20)` cyan), never a solid wireframe border.
-- **Surface Cohesion**: A filled rounded pill has a cohesive solid surface. Even minor edge antialiasing blends seamlessly, whereas a 1px outline exposes two jagged boundaries (inner and outer).
+- **Surface Cohesion**: A filled rounded pill has a cohesive solid surface. Even minor edge antialiasing blends seamlessly, whereas a 1px outline exposes two jagged boundaries (inner and outer). Always use `ui.draw_button` for interactive buttons.
 
 #### Rule 3: Decoupled Icon and Text Measurement
 Never concatenate an icon and a text label into a single string if pixel-perfect alignment is required.

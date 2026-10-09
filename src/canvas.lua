@@ -195,21 +195,27 @@ function canvas.draw(win_w, win_h)
 
   -- Button 1: Toggle Theme
   canvas.hover_theme_btn = ui.point_in_rect(canvas.mouse_x, canvas.mouse_y, b1_x, text_y, btn_w, btn_h)
-  local b1_bg = canvas.hover_theme_btn and c.surface_active or c.surface_hover
-  ui.draw_rounded_box(b1_x, text_y, btn_w, btn_h, 7 * s, b1_bg, nil, 0)
   local theme_icon = (style.current_theme == "dark") and icons.sun or icons.moon
   local theme_label = (style.current_theme == "dark") and "Light Theme" or "Dark Theme"
-  local theme_icon_col = (style.current_theme == "dark") and c.lamp_gold or c.text_secondary
-  ui.draw_centered_icon_and_text(style.font_icon, theme_icon, style.font_normal, theme_label, b1_x, text_y, btn_w, btn_h, theme_icon_col, c.text_primary, 8 * s)
+  ui.draw_button(style.font_normal, theme_label, b1_x, text_y, btn_w, btn_h, {
+    variant = "surface",
+    is_hover = canvas.hover_theme_btn,
+    icon = theme_icon,
+    radius = math.floor(7 * s),
+  })
 
-  -- Button 2: Toggle Lamp
+  -- Button 2: Toggle Lamp (Pinglet Luminous Tinted Style)
   canvas.hover_pulse_btn = ui.point_in_rect(canvas.mouse_x, canvas.mouse_y, b2_x, text_y, btn_w, btn_h)
-  local b2_bg = canvas.hover_pulse_btn and c.surface_active or c.surface_hover
-  ui.draw_rounded_box(b2_x, text_y, btn_w, btn_h, 7 * s, b2_bg, nil, 0)
   local lamp_icon = canvas.lamp_on and icons.bulb_filled or icons.bulb_off
   local lamp_label = canvas.lamp_on and "Turn Lamp Off" or "Turn Lamp On"
-  local lamp_icon_col = canvas.lamp_on and c.lamp_gold or c.text_tertiary
-  ui.draw_centered_icon_and_text(style.font_icon, lamp_icon, style.font_normal, lamp_label, b2_x, text_y, btn_w, btn_h, lamp_icon_col, c.text_primary, 8 * s)
+  ui.draw_button(style.font_normal, lamp_label, b2_x, text_y, btn_w, btn_h, {
+    variant = canvas.lamp_on and "tinted" or "surface",
+    accent_theme = "gold",
+    is_active = canvas.lamp_on,
+    is_hover = canvas.hover_pulse_btn,
+    icon = lamp_icon,
+    radius = math.floor(7 * s),
+  })
 
   -- 10. Live Status Bar Inside Card
   local footer_h = math.floor(34 * s)

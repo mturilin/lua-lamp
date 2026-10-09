@@ -15,6 +15,8 @@ framework.get_scale = core.get_default_scale
 framework.Style = require "src.style"
 framework.UI = require "src.ui"
 framework.Icons = require "src.icons"
+framework.draw_button = framework.UI.draw_button
+framework.draw_segmented_track = framework.UI.draw_segmented_track
 
 -- 3. Cross-Platform Menu & Settings Subsystems
 framework.Menu = require "src.menu"

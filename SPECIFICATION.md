@@ -103,9 +103,18 @@ It serves dual purposes:
 ### Invariant 10: Mini-Flutter Application Framework Facade Contract
 - Lua Lamp provides a standardized developer facade (`src/framework.lua`) exposing:
   - First-class UI widgets: `Widget`, `Button`, `Label`, `Toggle`, `CheckBox`, `TextBox`, `NoteBook`, `SelectBox`, `ListBox`, `ScrollBar`, `ProgressBar`, `ColorPicker`, `MessageBox`, `Dialog`.
-  - Drawing & vector primitives: `UI` (anti-aliased rounded boxes, optical baseline text, circles, pill badges).
+  - Drawing & vector primitives: `UI` (anti-aliased rounded boxes, optical baseline text, circles, pill badges, `draw_button`, `draw_segmented_track`).
   - Tabler icons registry: `Icons`.
   - System services: `Menu`, `Settings`, `Canvas`, `Style`, `add_thread`, `rescale`, `get_scale`.
+
+### Invariant 11: Pinglet Button Highlight Standard
+- All interactive buttons, segmented control selectors, and toggles across Lua Lamp follow the **Pinglet Button Highlight Design System**:
+  1. **The Borderless Surface Principle**: Controls NEVER use 1px wireframe border outlines. All states (resting, hover, active) use cohesive filled surfaces with subpixel anti-aliased rounded corners.
+  2. **Segmented Control Capsule Track**: Related options (e.g. scale presets `Auto`, `1.0x`, `2.0x`, font families, size presets) sit within a sunken/recessed capsule track (`c.track_bg`).
+  3. **Active Solid Pill (`variant = "solid"`)**: The selected item (like Pinglet `60s`) renders as a vibrant filled pill (`c.btn_accent_bg` sky-400 `#38bdf8` or `c.btn_gold_bg`) with high-contrast inverted dark text (`c.btn_accent_text` `#0c1018`), SemiBold weight, zero border stroke, and optical baseline shift.
+  4. **Active Luminous Tinted Pill (`variant = "tinted"`)**: Toggled/action items (like Pinglet `123 Follow`, `+ Add Target`, and Lamp toggle) render as luminous translucent tinted pills (`c.btn_tint_bg` / `c.btn_gold_tint_bg`) with glowing accent text and icon (`c.btn_tint_text`), zero border stroke.
+  5. **Translucent Hover Highlight**: Unselected items illuminate smoothly on hover (`c.surface_hover` / `c.btn_tint_hover`) without wireframes.
+  6. **Decoupled Icon & Label Geometry**: Text and icons calculate independent optical centerlines (`ui.draw_centered_icon_and_text`) to eliminate typographic baseline drift.
 
 ---
 

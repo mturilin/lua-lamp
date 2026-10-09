@@ -37,6 +37,8 @@ function Button:new(parent, label)
     y = style.padding.y
   }
 
+  self.border.width = 0 -- Pinglet standard: borderless surface
+
   self.expanded = false
 
   self:set_label(label or "")
@@ -96,8 +98,8 @@ end
 
 function Button:on_mouse_enter(...)
   Button.super.on_mouse_enter(self, ...)
-  self.hover_text = style.accent
-  self.hover_back = style.line_highlight
+  self.hover_text = style.btn_accent_text or style.accent
+  self.hover_back = style.btn_surface_hover or style.line_highlight
 end
 
 function Button:on_mouse_leave(...)
