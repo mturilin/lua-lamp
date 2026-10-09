@@ -91,11 +91,13 @@ local themes = {
 
 -- Expose current theme colors
 style.colors = themes.dark
+style.syntax = themes.dark
 
 function style.set_theme(name)
   if themes[name] then
     style.current_theme = name
     style.colors = themes[name]
+    style.syntax = themes[name]
   end
 end
 

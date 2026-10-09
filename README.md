@@ -296,6 +296,38 @@ framework.draw_button(framework.Style.font_normal, "Follow", btn2_x, btn_y, btn2
 })
 ```
 
+#### Example 5: Managing Native macOS Permissions & Privacy Authorizations
+```lua
+local framework = require "src.framework"
+local perm = framework.Permissions
+
+-- 1. Query real-time permission status
+local status = perm.get_status(perm.LOCAL_NETWORK)
+if not perm.is_granted(perm.LOCAL_NETWORK) then
+  print("Local Network authorization status:", status)
+end
+
+-- 2. Request authorization asynchronously without blocking the 60 FPS event loop
+perm.request(perm.LOCAL_NETWORK, { target_ip = "192.168.1.1" }, function(st, granted)
+  print("Local Network permission updated:", st, "Granted:", granted)
+end)
+
+-- 3. Instant deep-linking to target macOS System Settings pane
+perm.open_settings(perm.ACCESSIBILITY)
+
+-- 4. Create an inline warning banner widget (auto-hides on grant, conforms to Pinglet button standard)
+local banner = perm.create_banner(perm.LOCAL_NETWORK, {
+  message = "Local network access is required to detect gateway ping latency.",
+  action_label = "Open Settings",
+  on_action = function()
+    perm.open_settings(perm.LOCAL_NETWORK)
+  end,
+})
+
+-- Inside your draw cycle:
+banner:draw(x, y, w, 36 * SCALE)
+```
+
 ---
 
 ## 📐 Project Architecture
@@ -313,7 +345,8 @@ lua-lamp/
 │   ├── main.c                  # Native entry point and SDL3 initialization
 │   ├── renderer.c              # Software / SDL3 2D rendering pipeline
 │   ├── renwindow.c             # SDL3 window management & High-DPI scaling
-│   └── bundle_open.m           # macOS bundle resource resolution & native NSMenu bridge
+│   ├── bundle_open.m           # macOS bundle resources, NSMenu & native permission bindings
+│   └── netauth.m               # Standalone companion helper for local network auth
 ├── runtime/                    # Complete UI Framework and Low-Level C-Bindings
 │   ├── colors/                 # Prebuilt color themes (default, monokai, solarized, etc.)
 │   ├── core/                   # UI Core: Object, View, Node, RootView, ScrollBar, Command, Keymap, DocView
@@ -328,6 +361,7 @@ lua-lamp/
 │   ├── icons.lua               # Tabler Icons codepoints registry
 │   ├── menu.lua                # Unified menu registry & cross-platform dispatcher
 │   ├── menubar.lua             # In-window borderless menu bar (Linux/Windows)
+│   ├── permissions.lua         # Native macOS permissions & privacy authorization framework
 │   ├── settings_dialog.lua     # Extensible floating modal settings window
 │   ├── style.lua               # Theme & font management
 │   └── ui.lua                  # Vector drawing primitives & UI components
@@ -341,7 +375,7 @@ lua-lamp/
 │   ├── build_runtime_linux.sh  # Native Linux C host compiler
 │   └── generate_icon.swift     # Procedural icon generator
 └── tests/
-    └── test_lualamp.lua        # Headless automated test suite (Stages 1-11)
+    └── test_lualamp.lua        # Headless automated test suite (Stages 1-12)
 ```
 
 ---

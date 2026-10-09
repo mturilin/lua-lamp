@@ -205,15 +205,86 @@ function core.init()
   -- Initialize Unified Menu System (Native NSMenu on macOS, In-Window bar on Linux)
   menu.init_defaults()
 
-  -- Initialize UI View Hierarchy (RootView) with CanvasView as primary view
+  -- Check for external downstream application project
+  local app_dir = os.getenv("LUALAMP_APP_DIR")
+  if not app_dir and rawget(_G, "MACOS_RESOURCES") and system.get_file_info(MACOS_RESOURCES .. "/app") then
+    app_dir = MACOS_RESOURCES .. "/app"
+  elseif not app_dir and rawget(_G, "DATADIR") and system.get_file_info(DATADIR .. "/app") then
+    app_dir = DATADIR .. "/app"
+  end
+
+  local custom_app_view = nil
+  if app_dir then
+    package.path = app_dir .. "/?.lua;" .. app_dir .. "/?/init.lua;" .. package.path
+
+    -- Read app.json if present
+    local app_json_file = app_dir .. "/app.json"
+    local entry_file = nil
+    local manifest = nil
+    if system.get_file_info(app_json_file) then
+      local f = io.open(app_json_file, "r")
+      if f then
+        local content = f:read("*a")
+        f:close()
+        -- Fallback parser for app.json fields
+        manifest = {}
+        manifest.name = content:match('"name"%s*:%s*"([^"]+)"')
+        manifest.displayName = content:match('"displayName"%s*:%s*"([^"]+)"')
+        manifest.entry = content:match('"entry"%s*:%s*"([^"]+)"')
+        local ww = content:match('"width"%s*:%s*(%d+)')
+        local wh = content:match('"height"%s*:%s*(%d+)')
+        if ww and wh then
+          manifest.window = { width = tonumber(ww), height = tonumber(wh) }
+        end
+
+        if manifest then
+          if manifest.displayName or manifest.name then
+            system.set_window_title(manifest.displayName or manifest.name)
+          end
+          if manifest.window and manifest.window.width and manifest.window.height then
+            local _, _, cur_x, cur_y = system.get_window_size()
+            system.set_window_size(manifest.window.width, manifest.window.height, cur_x or 80, cur_y or 80)
+          end
+          if manifest.entry then
+            entry_file = app_dir .. "/" .. manifest.entry
+          end
+        end
+      end
+    end
+
+    if not entry_file or not system.get_file_info(entry_file) then
+      if system.get_file_info(app_dir .. "/main.lua") then
+        entry_file = app_dir .. "/main.lua"
+      elseif system.get_file_info(app_dir .. "/app.lua") then
+        entry_file = app_dir .. "/app.lua"
+      elseif system.get_file_info(app_dir .. "/init.lua") then
+        entry_file = app_dir .. "/init.lua"
+      end
+    end
+
+    if entry_file and system.get_file_info(entry_file) then
+      local ok, res = pcall(dofile, entry_file)
+      if ok and res and type(res) == "table" and res.draw then
+        custom_app_view = res
+      elseif not ok then
+        io.stderr:write("[Lua Lamp] Failed to load application entry (" .. entry_file .. "): " .. tostring(res) .. "\n")
+      end
+    end
+  end
+
+  -- Initialize UI View Hierarchy (RootView) with custom app view or default CanvasView
   local ok, RootView = pcall(require, "core.rootview")
   if ok and RootView then
     core.root_view = RootView()
-    local CanvasView = require "src.canvas_view"
-    core.canvas_view = CanvasView()
-    core.root_view.root_node.views = { core.canvas_view }
-    core.root_view.root_node.active_view = core.canvas_view
-    core.active_view = core.canvas_view
+    local primary_view = custom_app_view
+    if not primary_view then
+      local CanvasView = require "src.canvas_view"
+      core.canvas_view = CanvasView()
+      primary_view = core.canvas_view
+    end
+    core.root_view.root_node.views = { primary_view }
+    core.root_view.root_node.active_view = primary_view
+    core.active_view = primary_view
   end
 
   core.redraw = true

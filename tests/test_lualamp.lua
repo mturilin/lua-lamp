@@ -287,6 +287,108 @@ renderer.end_frame()
 
 print("[PASS] Unified Menu System, Extensible Settings Modal, & Pinglet Button Standard verified.")
 
+-- 12. Test Native macOS Permissions Framework
+local permissions = framework.Permissions
+assert(permissions ~= nil, "framework.Permissions must be exposed")
+assert(permissions.LOCAL_NETWORK == "local_network", "LOCAL_NETWORK constant should match")
+assert(permissions.ACCESSIBILITY == "accessibility", "ACCESSIBILITY constant should match")
+assert(permissions.SCREEN_RECORDING == "screen_recording", "SCREEN_RECORDING constant should match")
+assert(permissions.FULL_DISK_ACCESS == "full_disk_access", "FULL_DISK_ACCESS constant should match")
+assert(permissions.NOTIFICATIONS == "notifications", "NOTIFICATIONS constant should match")
+assert(permissions.CAMERA == "camera", "CAMERA constant should match")
+assert(permissions.MICROPHONE == "microphone", "MICROPHONE constant should match")
+
+-- Test Status Constants
+assert(permissions.STATUS.GRANTED == "granted", "STATUS.GRANTED mismatch")
+assert(permissions.STATUS.DENIED == "denied", "STATUS.DENIED mismatch")
+assert(permissions.STATUS.NOT_DETERMINED == "not_determined", "STATUS.NOT_DETERMINED mismatch")
+assert(permissions.STATUS.RESTRICTED == "restricted", "STATUS.RESTRICTED mismatch")
+assert(permissions.STATUS.UNSUPPORTED == "unsupported", "STATUS.UNSUPPORTED mismatch")
+
+-- Test Platform Detection & Metadata Registry
+assert(permissions.is_macos() == true, "permissions.is_macos() should return true on macOS test runner")
+local net_meta = permissions.get_metadata(permissions.LOCAL_NETWORK)
+assert(net_meta ~= nil and net_meta.title == "Local Network", "Metadata for local_network must be populated")
+assert(net_meta.url:find("Privacy_LocalNetwork") ~= nil, "Metadata URL must point to Privacy_LocalNetwork")
+
+local ax_meta = permissions.get_metadata(permissions.ACCESSIBILITY)
+assert(ax_meta ~= nil and ax_meta.settings_pane == "accessibility", "Metadata for accessibility must be populated")
+
+-- Test Native Status Queries
+local ax_st = permissions.get_status(permissions.ACCESSIBILITY)
+assert(ax_st == "granted" or ax_st == "denied", "Accessibility status should be granted or denied")
+local scr_st = permissions.get_status(permissions.SCREEN_RECORDING)
+assert(scr_st == "granted" or scr_st == "denied", "Screen recording status should be valid")
+local fda_st = permissions.get_status(permissions.FULL_DISK_ACCESS)
+assert(fda_st == "granted" or fda_st == "denied", "Full disk access status should be valid")
+
+-- Test Settings Deep Link URL resolution
+local url = permissions.get_settings_url(permissions.LOCAL_NETWORK)
+assert(url == "x-apple.systempreferences:com.apple.preference.security?Privacy_LocalNetwork", "Deep link URL match")
+
+-- Test Permission Banner UI Component (draw, hover, click, dismiss)
+local banner_action_fired = false
+local banner_dismiss_fired = false
+local banner = permissions.create_banner(permissions.LOCAL_NETWORK, {
+  message = "Please allow network access.",
+  on_action = function() banner_action_fired = true end,
+  on_dismiss = function() banner_dismiss_fired = true end,
+})
+assert(banner ~= nil, "Banner object must be created")
+banner.visible = true
+banner.dismissed = false
+renderer.begin_frame()
+local bh = banner:draw(50, 50, 400, 36)
+assert(bh == 36, "Banner draw should return height")
+renderer.end_frame()
+
+-- Test Banner mouse hover and click interactions
+local s = style.scale or 1.0
+local btn_w = math.floor(108 * s)
+local btn_h = math.floor(26 * s)
+local right_pad = math.floor(12 * s)
+local dismiss_w = math.floor(24 * s)
+local btn_x = 50 + 400 - right_pad - dismiss_w - btn_w + 5
+local btn_y = 50 + math.floor((36 - btn_h) / 2) + 2
+banner:on_mouse_moved(btn_x, btn_y, 50, 50, 400, 36)
+assert(banner.hover_action == true, "Banner action button should detect hover")
+banner:on_mouse_pressed("left", btn_x, btn_y, 50, 50, 400, 36)
+assert(banner_action_fired == true, "Clicking banner action button should trigger on_action")
+
+-- Test Banner dismiss click
+local dis_x = 50 + 400 - right_pad - dismiss_w + math.floor(4 * s) + 2
+local dis_y = 50 + math.floor((36 - dismiss_w) / 2) + 2
+banner:on_mouse_pressed("left", dis_x, dis_y, 50, 50, 400, 36)
+assert(banner_dismiss_fired == true, "Clicking banner dismiss should trigger on_dismiss")
+assert(banner.dismissed == true, "Banner should be marked dismissed")
+
+-- Test Settings Dialog "Permissions" Tab Integration
+local all_tabs_after = settings:get_tabs()
+local has_perm_tab = false
+for _, tab in ipairs(all_tabs_after) do
+  if tab.id == "permissions" then has_perm_tab = true break end
+end
+assert(has_perm_tab == true, "Permissions tab must be registered in Settings dialog")
+
+-- Test Settings Dialog rendering Permissions tab
+settings:show()
+settings.active_tab = "permissions"
+renderer.begin_frame()
+core.draw()
+renderer.end_frame()
+
+-- Test clicking "Refresh Status" button in Settings dialog
+local panel_x = settings.x + math.floor(190 * s)
+local panel_y = settings.y + math.floor(54 * s)
+local panel_w = settings.w - math.floor(206 * s)
+local panel_h = settings.h - math.floor(106 * s)
+local ref_x = panel_x + 10
+local ref_y = panel_y + panel_h - math.floor(30 * s) - math.floor(8 * s) + 5
+settings:on_mouse_pressed("left", ref_x, ref_y)
+settings:hide()
+
+print("[PASS] Native macOS Permissions Framework, Deep-Link URLs, & UI Components verified.")
+
 print("\n========================================")
 print("ALL LUA LAMP VERIFICATION TESTS PASSED!")
 print("========================================")

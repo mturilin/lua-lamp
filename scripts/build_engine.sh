@@ -70,6 +70,10 @@ LINK_LIBS+=(
   "-framework" "CoreServices"
   "-framework" "IOKit"
   "-framework" "QuartzCore"
+  "-framework" "ApplicationServices"
+  "-framework" "CoreGraphics"
+  "-framework" "Network"
+  "-framework" "AVFoundation"
 )
 
 # 4. Gather C & ObjC sources

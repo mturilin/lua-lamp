@@ -44,6 +44,14 @@ echo "Installing Mach-O executable and libraries..."
 cp "$ENGINE_BIN" "$TARGET_APP/Contents/MacOS/lualamp"
 chmod +x "$TARGET_APP/Contents/MacOS/lualamp"
 
+# 4.5. Compile companion netauth helper
+if [ -f "$REPO_DIR/engine/netauth.m" ]; then
+  echo "Compiling netauth companion helper and dylib..."
+  clang -O2 -framework Foundation -framework Network "$REPO_DIR/engine/netauth.m" -o "$TARGET_APP/Contents/MacOS/netauth"
+  chmod +x "$TARGET_APP/Contents/MacOS/netauth"
+  clang -shared -fPIC -O2 -framework Foundation -framework Network "$REPO_DIR/engine/netauth.m" -o "$TARGET_APP/Contents/Resources/libnetauth.dylib"
+fi
+
 # 5. Bundle libSDL3.0.dylib and adjust load paths
 if [ -n "$BREW_PREFIX" ] && [ -f "$BREW_PREFIX/opt/sdl3/lib/libSDL3.0.dylib" ]; then
   echo "Bundling libSDL3.0.dylib..."
@@ -112,6 +120,19 @@ cat << 'EOF' > "$TARGET_APP/Contents/Info.plist"
 	<true/>
 	<key>NSHumanReadableCopyright</key>
 	<string>© 2026 Lua Lamp</string>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>Lua Lamp requires local network access to discover devices, measure gateway latency, and diagnose network connectivity.</string>
+	<key>NSBonjourServices</key>
+	<array>
+		<string>_http._tcp</string>
+		<string>_bonjour._tcp</string>
+	</array>
+	<key>NSCameraUsageDescription</key>
+	<string>Lua Lamp requires camera access for video features.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Lua Lamp requires microphone access for audio recording.</string>
+	<key>NSAppleEventsUsageDescription</key>
+	<string>Lua Lamp requires AppleEvents access to automate tasks.</string>
 </dict>
 </plist>
 EOF

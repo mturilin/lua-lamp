@@ -39,6 +39,23 @@ local icons = {
   circle_check_filled   = "\xef\x9c\x84", -- U+F704 circle-check (filled)
   circle_x              = "\xee\xa9\xaa", -- U+EA6A circle-x (outline)
   circle_x_filled       = "\xef\x9c\xb9", -- U+F739 circle-x (filled)
+
+  -- Security, Privacy & System Permissions
+  shield                = "\xee\xac\x9b", -- U+EB1B shield (outline)
+  shield_check          = "\xee\xac\x99", -- U+EB19 shield-check (outline)
+  shield_x              = "\xee\xac\x9e", -- U+EB1E shield-x (outline)
+  shield_lock           = "\xee\xac\x9a", -- U+EB1A shield-lock (outline)
+  lock                  = "\xee\xab\xa5", -- U+EAE5 lock
+  lock_open             = "\xee\xab\xa4", -- U+EAE4 lock-open
+  wifi                  = "\xee\xad\x92", -- U+EB52 wifi
+  router                = "\xee\xac\x98", -- U+EB18 router
+  network               = "\xee\xac\x98", -- U+EB18 router / local network alias
+  bell                  = "\xee\xa8\xb5", -- U+EA35 bell (Notifications)
+  folder                = "\xee\xaa\xb7", -- U+EAB7 folder (Full Disk Access)
+  camera                = "\xee\xa9\x97", -- U+EA57 camera
+  microphone            = "\xee\xab\xb2", -- U+EAF2 microphone
+  external_link         = "\xee\xaa\xa8", -- U+EAA8 external-link
+  info_circle           = "\xee\xab\x88", -- U+EAC8 info-circle
 }
 
 return icons

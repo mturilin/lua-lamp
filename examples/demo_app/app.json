@@ -1,0 +1,11 @@
+{
+  "name": "DemoApp",
+  "displayName": "DemoApp — Latency Monitor",
+  "identifier": "com.lualamp.demoapp",
+  "version": "1.0.0",
+  "entry": "main.lua",
+  "window": {
+    "width": 1000,
+    "height": 650
+  }
+}

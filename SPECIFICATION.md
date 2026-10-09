@@ -119,6 +119,35 @@ It serves dual purposes:
   5. **Translucent Hover Highlight**: Unselected items illuminate smoothly on hover (`c.surface_hover` / `c.btn_tint_hover`) without wireframes.
   6. **Decoupled Icon & Label Geometry**: Text and icons calculate independent optical centerlines (`ui.draw_centered_icon_and_text`) to eliminate typographic baseline drift.
 
+### Invariant 12: Native macOS Permissions Framework Contract
+- **Zero-Block Native Privacy & System Permissions**:
+  - Lua Lamp provides a native macOS privacy authorizations and permissions framework accessible via `framework.Permissions` (and `src/permissions.lua`).
+  - **Native C & Objective-C Host Integration**:
+    - `system.macos_get_permission_status(perm)` queries real-time OS authorization without blocking the event loop:
+      - `accessibility`: Queries `AXIsProcessTrusted()`.
+      - `screen_recording`: Queries `CGPreflightScreenCaptureAccess()`.
+      - `camera`: Queries `[AVCaptureDevice authorizationStatusForMediaType:AVMediaTypeVideo]`.
+      - `microphone`: Queries `[AVCaptureDevice authorizationStatusForMediaType:AVMediaTypeAudio]`.
+      - `full_disk_access`: Tests read access against protected TCC database / user safari stores.
+      - `local_network`: Tracks Bonjour / UDP connectivity state.
+      - `notifications`: Returns notification delivery entitlement status.
+    - `system.macos_request_permission(perm, options)` initiates native authorization flows:
+      - `accessibility`: Invokes `AXIsProcessTrustedWithOptions` with prompt dictionary.
+      - `screen_recording`: Invokes `CGRequestScreenCaptureAccess()`.
+      - `camera` / `microphone`: Invokes `[AVCaptureDevice requestAccessForMediaType:completionHandler:]`.
+      - `local_network`: Triggers Bonjour discovery (`DNSServiceBrowse`, `nw_browser_t`) and UDP gateway ping (`nw_connection_t`), matching the companion helper pattern.
+      - `full_disk_access`: Seamlessly guides the user by opening the target System Settings pane.
+    - `system.macos_open_settings_pane(pane)` executes instant deep-linking into exact macOS System Settings panes using `x-apple.systempreferences:` URLs via `[[NSWorkspace sharedWorkspace] openURL:]`.
+  - **Asynchronous Coroutine Observation**:
+    - `permissions.request(perm, options, callback)` steps non-blocking poll loops via `core.add_thread` and yields control across frames until user consent is captured.
+  - **Native Companion Binary Packaging**:
+    - Standalone `Contents/MacOS/netauth` helper and `Contents/Resources/libnetauth.dylib` are built from `engine/netauth.m` directly into the `.app` bundle.
+  - **Native-Feeling UI Components**:
+    - `permissions.create_banner(perm, options)`: Renders an inline warning card conforming to Rule 1 and Rule 2 (borderless surface, optical baseline shift, tinted button).
+    - `permissions.register_settings_tab()`: Automatically registers a live "Permissions" tab in `framework.Settings` (`Cmd+,`) displaying real-time authorization badges (`Granted`, `Open Settings`).
+  - **Cross-Platform Safety**:
+    - On Linux/Windows or headless environments, permission queries safely degrade to `"granted"` or `"unsupported"`, preventing unhandled exceptions.
+
 ---
 
 ## 3. Architecture & Directory Blueprint
@@ -137,7 +166,8 @@ lua-lamp/
 │   ├── main.c                  # Native host entry point and SDL3 initialization
 │   ├── renderer.c              # Software / SDL3 2D rendering pipeline
 │   ├── renwindow.c             # SDL3 window management and High-DPI handling
-│   ├── bundle_open.m           # macOS bundle resource resolution
+│   ├── bundle_open.m           # macOS bundle resources, menus & native permission bindings
+│   ├── netauth.m               # Standalone companion helper for local network auth
 │   └── arena_allocator.c       # Fast memory arena allocator
 ├── fonts/                      # Bundled TrueType typography
 │   ├── PublicSans-*.ttf        # UI body typography
@@ -168,11 +198,12 @@ lua-lamp/
 │   ├── icons.lua               # Tabler icon codepoints registry
 │   ├── menu.lua                # Unified menu registry & cross-platform dispatcher
 │   ├── menubar.lua             # In-window borderless menu bar (Linux/Windows)
+│   ├── permissions.lua         # Native macOS permissions & privacy authorization framework
 │   ├── settings_dialog.lua     # Extensible floating modal settings window
 │   ├── style.lua               # Theme management (dark/light) & font loader
 │   └── ui.lua                  # Reusable drawing primitives & UI components
 ├── tests/
-│   └── test_lualamp.lua        # Headless automated verification suite (Stages 1-11)
+│   └── test_lualamp.lua        # Headless automated verification suite (Stages 1-12)
 ├── Dockerfile                  # Containerized Linux build environment
 ├── LICENSE                     # MIT Open Source License
 ├── README.md                   # User documentation and guide

@@ -177,12 +177,27 @@ static void push_win32_error(lua_State *L, DWORD rc) {
 #ifdef __APPLE__
 int pop_pending_menu_command(char *buf, size_t buflen);
 int f_set_native_menu(lua_State *L);
+int f_macos_get_permission_status(lua_State *L);
+int f_macos_request_permission(lua_State *L);
+int f_macos_open_settings_pane(lua_State *L);
 #else
 static int pop_pending_menu_command(char *buf, size_t buflen) {
   (void)buf; (void)buflen;
   return 0;
 }
 static int f_set_native_menu(lua_State *L) {
+  lua_pushboolean(L, 0);
+  return 1;
+}
+static int f_macos_get_permission_status(lua_State *L) {
+  lua_pushstring(L, "granted");
+  return 1;
+}
+static int f_macos_request_permission(lua_State *L) {
+  lua_pushboolean(L, 1);
+  return 1;
+}
+static int f_macos_open_settings_pane(lua_State *L) {
   lua_pushboolean(L, 0);
   return 1;
 }
@@ -1233,6 +1248,9 @@ static const luaL_Reg lib[] = {
   { "load_native_plugin",  f_load_native_plugin  },
   { "path_compare",        f_path_compare        },
   { "get_fs_type",         f_get_fs_type         },
+  { "macos_get_permission_status", f_macos_get_permission_status },
+  { "macos_request_permission",    f_macos_request_permission    },
+  { "macos_open_settings_pane",    f_macos_open_settings_pane    },
   { NULL, NULL }
 };
 

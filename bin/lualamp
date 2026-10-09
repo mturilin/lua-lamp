@@ -44,20 +44,30 @@ export LITE_USERDIR="$SCRIPT_DIR"
 
 show_help() {
   cat << EOF
-💡 Lua Lamp — Lua & SDL3 Desktop Application Starter Template
+💡 Lua Lamp — Lua & SDL3 Desktop Application Platform & SDK
 
 Usage:
-  lualamp                Launch Lua Lamp application
-  lualamp --test         Run automated headless verification test suite
-  lualamp --help         Show this help message
-  lualamp --version      Show version information
+  lualamp                      Launch Lua Lamp default stage
+  lualamp run <dir|file>       Run a downstream application project in development mode
+  lualamp build <dir> [opts]   Package a downstream project into a standalone native app
+  lualamp init <dir> [name]    Scaffold a new lightweight application project
+  lualamp --test               Run automated headless verification test suite
+  lualamp --help, -h           Show this help message
+  lualamp --version, -v        Show version information
 
-Keyboard Controls:
-  <Space>               Toggle central lamp glow & beam animation
-  <T>                   Toggle between Dark and Light color themes
-  <Click>               Spawn radiant ripple on canvas
-  <F11>                 Toggle Fullscreen mode
-  <Q> / <Esc>           Quit application
+Commands:
+  run   [dir]                  Execute downstream app (looks for app.json / main.lua)
+  build [dir] [--macos|--dmg|--linux]
+                               Package standalone native bundle (.app, .dmg, or .tar.gz)
+  init  <dir> [AppName]        Create new application scaffold with app.json and main.lua
+
+Keyboard Controls (Default Stage):
+  <Space>                      Toggle central lamp glow & beam animation
+  <T>                          Toggle between Dark and Light color themes
+  <Cmd+,> / <Ctrl+,>           Open modal Settings dialog
+  <Click>                      Spawn radiant ripple on canvas
+  <F11>                        Toggle Fullscreen mode
+  <Q> / <Esc>                  Quit application
 EOF
 }
 
@@ -67,12 +77,34 @@ case "$1" in
     exit 0
     ;;
   --version|-v)
-    echo "Lua Lamp v1.0.0 (Native Lua 5.4 / SDL3 platform)"
+    echo "Lua Lamp v1.0.0 (Native Lua 5.4 / SDL3 platform SDK)"
     exit 0
     ;;
   --test)
     export LUALAMP_TEST_SCRIPT="$SCRIPT_DIR/tests/test_lualamp.lua"
     exec "$LUALAMP_BIN"
+    ;;
+  run)
+    shift
+    TARGET_APP_PATH="${1:-.}"
+    if [ -f "$TARGET_APP_PATH" ]; then
+      TARGET_APP_DIR="$(cd "$(dirname "$TARGET_APP_PATH")" && pwd)"
+    elif [ -d "$TARGET_APP_PATH" ]; then
+      TARGET_APP_DIR="$(cd "$TARGET_APP_PATH" && pwd)"
+    else
+      echo "Error: Application directory or entry script not found: $TARGET_APP_PATH" >&2
+      exit 1
+    fi
+    export LUALAMP_APP_DIR="$TARGET_APP_DIR"
+    exec "$LUALAMP_BIN"
+    ;;
+  build)
+    shift
+    exec "$SCRIPT_DIR/scripts/package_app.sh" "$@"
+    ;;
+  init)
+    shift
+    exec "$SCRIPT_DIR/scripts/init_app.sh" "$@"
     ;;
   *)
     exec "$LUALAMP_BIN" "$@"

@@ -27,14 +27,15 @@ local settings = {
 }
 
 --- Register a custom tab / section for other applications/plugins to extend Settings
----@param id string Unique identifier (e.g. "database", "plugins")
+---@param id string Unique identifier (e.g. "database", "plugins", "permissions")
 ---@param title string Human-readable tab title
 ---@param icon string Tabler icon code or label glyph
 ---@param render_fn fun(panel_x: number, panel_y: number, panel_w: number, panel_h: number, scale: number, colors: table, dialog: table)
-function settings:register_section(id, title, icon, render_fn)
+---@param click_fn? fun(px: number, py: number, panel_x: number, panel_y: number, panel_w: number, panel_h: number, dialog: table): boolean?
+function settings:register_section(id, title, icon, render_fn, click_fn)
   for i, s in ipairs(self.custom_sections) do
     if s.id == id then
-      self.custom_sections[i] = { id = id, title = title, icon = icon, render = render_fn }
+      self.custom_sections[i] = { id = id, title = title, icon = icon, render = render_fn, on_click = click_fn }
       return
     end
   end
@@ -43,6 +44,7 @@ function settings:register_section(id, title, icon, render_fn)
     title = title,
     icon = icon,
     render = render_fn,
+    on_click = click_fn,
   })
 end
 
@@ -198,6 +200,13 @@ function settings:on_mouse_pressed(button, px, py)
     self:handle_typography_click(px, py, panel_x, panel_y, panel_w, panel_h)
   elseif self.active_tab == "theme" then
     self:handle_theme_click(px, py, panel_x, panel_y, panel_w, panel_h)
+  else
+    for _, custom in ipairs(self.custom_sections) do
+      if custom.id == self.active_tab and custom.on_click then
+        custom.on_click(px, py, panel_x, panel_y, panel_w, panel_h, self)
+        break
+      end
+    end
   end
 
   return true

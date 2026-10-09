@@ -1,6 +1,14 @@
 #import <Foundation/Foundation.h>
 #import <AppKit/AppKit.h>
+#import <ApplicationServices/ApplicationServices.h>
+#import <CoreGraphics/CoreGraphics.h>
+#import <Network/Network.h>
+#import <AVFoundation/AVFoundation.h>
+#import <dns_sd.h>
+#include <fcntl.h>
+#include <unistd.h>
 #include <lua.h>
+#include <lauxlib.h>
 
 double get_macos_backing_scale_factor(void) {
   @autoreleasepool {
@@ -434,3 +442,198 @@ int f_set_native_menu(lua_State *L) {
     return 1;
   }
 }
+
+static void permissions_bonjour_reply(DNSServiceRef sdRef, DNSServiceFlags flags, uint32_t interfaceIndex,
+                                      DNSServiceErrorType errorCode, const char *serviceName,
+                                      const char *regtype, const char *replyDomain, void *context) {
+  (void)sdRef; (void)flags; (void)interfaceIndex; (void)errorCode;
+  (void)serviceName; (void)regtype; (void)replyDomain; (void)context;
+}
+
+static void trigger_local_network_prompt(const char *target_ip) {
+  if (!target_ip || strlen(target_ip) == 0) {
+    target_ip = "192.168.1.1";
+  }
+
+  // 1. DNSServiceBrowse triggers the standard macOS Local Network permission prompt
+  static DNSServiceRef sdRef = NULL;
+  DNSServiceBrowse(&sdRef, 0, 0, "_http._tcp", NULL, permissions_bonjour_reply, NULL);
+
+  // 2. NWBrowser (Network.framework) Bonjour discovery
+  nw_browse_descriptor_t desc = nw_browse_descriptor_create_bonjour_service("_http._tcp", NULL);
+  nw_parameters_t bparams = nw_parameters_create();
+  nw_browser_t browser = nw_browser_create(desc, bparams);
+  nw_browser_set_queue(browser, dispatch_get_main_queue());
+  nw_browser_start(browser);
+
+  // 3. UDP probe to the local gateway
+  nw_endpoint_t endpoint = nw_endpoint_create_host(target_ip, "53");
+  nw_parameters_t params = nw_parameters_create_secure_udp(NW_PARAMETERS_DISABLE_PROTOCOL, NW_PARAMETERS_DEFAULT_CONFIGURATION);
+  nw_connection_t conn = nw_connection_create(endpoint, params);
+  nw_connection_set_queue(conn, dispatch_get_main_queue());
+  nw_connection_start(conn);
+
+  dispatch_data_t data = dispatch_data_create("lualamp", 7, dispatch_get_main_queue(), DISPATCH_DATA_DESTRUCTOR_DEFAULT);
+  nw_connection_send(conn, data, NW_CONNECTION_DEFAULT_MESSAGE_CONTEXT, false, ^(nw_error_t _Nullable error) {
+    (void)error;
+  });
+}
+
+static NSString* get_settings_url_for_pane(NSString *pane) {
+  if ([pane isEqualToString:@"local_network"]) {
+    return @"x-apple.systempreferences:com.apple.preference.security?Privacy_LocalNetwork";
+  } else if ([pane isEqualToString:@"accessibility"]) {
+    return @"x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility";
+  } else if ([pane isEqualToString:@"screen_recording"]) {
+    return @"x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture";
+  } else if ([pane isEqualToString:@"full_disk_access"]) {
+    return @"x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles";
+  } else if ([pane isEqualToString:@"notifications"]) {
+    return @"x-apple.systempreferences:com.apple.preference.security?Privacy_Notifications";
+  } else if ([pane isEqualToString:@"camera"]) {
+    return @"x-apple.systempreferences:com.apple.preference.security?Privacy_Camera";
+  } else if ([pane isEqualToString:@"microphone"]) {
+    return @"x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone";
+  } else if ([pane isEqualToString:@"bluetooth"]) {
+    return @"x-apple.systempreferences:com.apple.preference.security?Privacy_Bluetooth";
+  } else if ([pane isEqualToString:@"location"]) {
+    return @"x-apple.systempreferences:com.apple.preference.security?Privacy_LocationServices";
+  }
+  return @"x-apple.systempreferences:com.apple.preference.security";
+}
+
+int f_macos_get_permission_status(lua_State *L) {
+  @autoreleasepool {
+    const char *perm = luaL_checkstring(L, 1);
+    if (strcmp(perm, "accessibility") == 0) {
+      BOOL trusted = AXIsProcessTrusted();
+      lua_pushstring(L, trusted ? "granted" : "denied");
+      return 1;
+    } else if (strcmp(perm, "screen_recording") == 0) {
+      if (@available(macOS 10.15, *)) {
+        BOOL trusted = CGPreflightScreenCaptureAccess();
+        lua_pushstring(L, trusted ? "granted" : "denied");
+      } else {
+        lua_pushstring(L, "granted");
+      }
+      return 1;
+    } else if (strcmp(perm, "camera") == 0) {
+      AVAuthorizationStatus st = [AVCaptureDevice authorizationStatusForMediaType:AVMediaTypeVideo];
+      if (st == AVAuthorizationStatusAuthorized) {
+        lua_pushstring(L, "granted");
+      } else if (st == AVAuthorizationStatusDenied) {
+        lua_pushstring(L, "denied");
+      } else if (st == AVAuthorizationStatusRestricted) {
+        lua_pushstring(L, "restricted");
+      } else {
+        lua_pushstring(L, "not_determined");
+      }
+      return 1;
+    } else if (strcmp(perm, "microphone") == 0) {
+      AVAuthorizationStatus st = [AVCaptureDevice authorizationStatusForMediaType:AVMediaTypeAudio];
+      if (st == AVAuthorizationStatusAuthorized) {
+        lua_pushstring(L, "granted");
+      } else if (st == AVAuthorizationStatusDenied) {
+        lua_pushstring(L, "denied");
+      } else if (st == AVAuthorizationStatusRestricted) {
+        lua_pushstring(L, "restricted");
+      } else {
+        lua_pushstring(L, "not_determined");
+      }
+      return 1;
+    } else if (strcmp(perm, "full_disk_access") == 0) {
+      NSString *home = NSHomeDirectory();
+      NSString *tccPath = [home stringByAppendingPathComponent:@"Library/Application Support/com.apple.TCC/TCC.db"];
+      int fd = open([tccPath UTF8String], O_RDONLY);
+      if (fd >= 0) {
+        close(fd);
+        lua_pushstring(L, "granted");
+        return 1;
+      }
+      NSString *safariPath = [home stringByAppendingPathComponent:@"Library/Safari/CloudTabs.db"];
+      fd = open([safariPath UTF8String], O_RDONLY);
+      if (fd >= 0) {
+        close(fd);
+        lua_pushstring(L, "granted");
+        return 1;
+      }
+      lua_pushstring(L, "denied");
+      return 1;
+    } else if (strcmp(perm, "local_network") == 0) {
+      lua_pushstring(L, "not_determined");
+      return 1;
+    } else if (strcmp(perm, "notifications") == 0) {
+      lua_pushstring(L, "granted");
+      return 1;
+    }
+    lua_pushstring(L, "unsupported");
+    return 1;
+  }
+}
+
+int f_macos_request_permission(lua_State *L) {
+  @autoreleasepool {
+    const char *perm = luaL_checkstring(L, 1);
+    if (strcmp(perm, "accessibility") == 0) {
+      NSDictionary *options = @{(__bridge id)kAXTrustedCheckOptionPrompt: @YES};
+      BOOL trusted = AXIsProcessTrustedWithOptions((__bridge CFDictionaryRef)options);
+      lua_pushboolean(L, trusted);
+      return 1;
+    } else if (strcmp(perm, "screen_recording") == 0) {
+      if (@available(macOS 10.15, *)) {
+        BOOL trusted = CGRequestScreenCaptureAccess();
+        lua_pushboolean(L, trusted);
+      } else {
+        lua_pushboolean(L, true);
+      }
+      return 1;
+    } else if (strcmp(perm, "camera") == 0) {
+      [AVCaptureDevice requestAccessForMediaType:AVMediaTypeVideo completionHandler:^(BOOL granted) {
+        (void)granted;
+      }];
+      lua_pushboolean(L, true);
+      return 1;
+    } else if (strcmp(perm, "microphone") == 0) {
+      [AVCaptureDevice requestAccessForMediaType:AVMediaTypeAudio completionHandler:^(BOOL granted) {
+        (void)granted;
+      }];
+      lua_pushboolean(L, true);
+      return 1;
+    } else if (strcmp(perm, "local_network") == 0) {
+      const char *target = luaL_optstring(L, 2, "192.168.1.1");
+      trigger_local_network_prompt(target);
+      lua_pushboolean(L, true);
+      return 1;
+    } else if (strcmp(perm, "full_disk_access") == 0) {
+      NSURL *url = [NSURL URLWithString:@"x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles"];
+      BOOL ok = [[NSWorkspace sharedWorkspace] openURL:url];
+      lua_pushboolean(L, ok);
+      return 1;
+    } else if (strcmp(perm, "notifications") == 0) {
+      NSURL *url = [NSURL URLWithString:@"x-apple.systempreferences:com.apple.preference.security?Privacy_Notifications"];
+      BOOL ok = [[NSWorkspace sharedWorkspace] openURL:url];
+      lua_pushboolean(L, ok);
+      return 1;
+    }
+    lua_pushboolean(L, false);
+    return 1;
+  }
+}
+
+int f_macos_open_settings_pane(lua_State *L) {
+  @autoreleasepool {
+    const char *str = luaL_checkstring(L, 1);
+    NSString *pane = [NSString stringWithUTF8String:str];
+    NSString *urlString = nil;
+    if ([pane hasPrefix:@"x-apple.systempreferences:"] || [pane hasPrefix:@"http://"] || [pane hasPrefix:@"https://"]) {
+      urlString = pane;
+    } else {
+      urlString = get_settings_url_for_pane(pane);
+    }
+    NSURL *url = [NSURL URLWithString:urlString];
+    BOOL ok = [[NSWorkspace sharedWorkspace] openURL:url];
+    lua_pushboolean(L, ok);
+    return 1;
+  }
+}
+

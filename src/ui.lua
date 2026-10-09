@@ -396,4 +396,7 @@ function ui.draw_button(text_font, label, x, y, w, h, opts)
   return x, y, w, h
 end
 
+-- Backward compatibility and intuitive alias
+ui.draw_rounded_rect = ui.draw_rounded_box
+
 return ui
